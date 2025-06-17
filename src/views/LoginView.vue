@@ -75,6 +75,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
+import { UserService } from '@/services/userService'
 
 const router = useRouter()
 const loginFormRef = ref<FormInstance>()
@@ -109,17 +110,41 @@ const handleLogin = async () => {
 
     loading.value = true
 
-    // Simular API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Usar el servicio real de usuarios para autenticar
+    console.log('🚀 Iniciando autenticación...')
+    const result = await UserService.login({
+      email: loginForm.email,
+      password: loginForm.password,
+    })
 
-    // Aquí iría la lógica de autenticación real
-    ElMessage.success('¡Inicio de sesión exitoso!')
+    if (result.success) {
+      ElMessage.success(`¡Bienvenido/a de vuelta, ${result.user.name}!`)
 
-    // Redirigir al dashboard
-    router.push('/')
-  } catch (error) {
-    ElMessage.error('Error al iniciar sesión. Verifica tus credenciales.')
-    console.error('Login error:', error)
+      // Almacenar información del usuario localmente
+      localStorage.setItem('user', JSON.stringify(result.user))
+      localStorage.setItem('isLoggedIn', 'true')
+
+      console.log('✅ Login exitoso, redirigiendo al dashboard...')
+
+      // Redirigir al dashboard
+      setTimeout(() => {
+        router.push('/')
+      }, 1000)
+    }
+  } catch (error: unknown) {
+    console.error('❌ Error en login:', error)
+
+    let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.'
+
+    if (error instanceof Error) {
+      if (error.message.includes('Usuario no encontrado')) {
+        errorMessage = 'No existe una cuenta con este correo electrónico.'
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
+      }
+    }
+
+    ElMessage.error(errorMessage)
   } finally {
     loading.value = false
   }

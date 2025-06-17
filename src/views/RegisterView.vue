@@ -111,6 +111,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Message, Lock } from '@element-plus/icons-vue'
+import { UserService } from '@/services/userService'
 
 const router = useRouter()
 const registerFormRef = ref<FormInstance>()
@@ -187,17 +188,50 @@ const handleRegister = async () => {
 
     loading.value = true
 
-    // Simular API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    // Usar el servicio real de usuarios para registrar
+    const userData = {
+      firstName: registerForm.firstName,
+      lastName: registerForm.lastName,
+      email: registerForm.email,
+      password: registerForm.password,
+    }
 
-    // Aquí iría la lógica de registro real
-    ElMessage.success('¡Cuenta creada exitosamente!')
+    console.log('🚀 Iniciando registro de usuario...')
+    const user = await UserService.register(userData)
 
-    // Redirigir al login
-    router.push('/login')
-  } catch (error) {
-    ElMessage.error('Error al crear la cuenta. Inténtalo nuevamente.')
-    console.error('Register error:', error)
+    ElMessage.success({
+      message: `¡Bienvenido/a ${user.name}! Tu cuenta ha sido creada exitosamente.`,
+      duration: 3000,
+    })
+
+    // Opcional: Almacenar información del usuario localmente
+    localStorage.setItem('user', JSON.stringify(user))
+    localStorage.setItem('isLoggedIn', 'true')
+
+    console.log('✅ Registro completado, redirigiendo al dashboard...')
+
+    // Redirigir al dashboard principal después de un breve delay
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
+  } catch (error: unknown) {
+    console.error('❌ Error en registro:', error)
+
+    // Manejar diferentes tipos de errores
+    let errorMessage = 'Error al crear la cuenta. Inténtalo nuevamente.'
+
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { status?: number } }
+      if (axiosError.response?.status === 409) {
+        errorMessage = 'Ya existe una cuenta con este correo electrónico.'
+      } else if (axiosError.response?.status === 400) {
+        errorMessage = 'Datos inválidos. Verifica la información ingresada.'
+      }
+    } else if (error instanceof Error && error.message?.includes('Network')) {
+      errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
+    }
+
+    ElMessage.error(errorMessage)
   } finally {
     loading.value = false
   }
