@@ -41,6 +41,24 @@
           <el-icon><InfoFilled /></el-icon>
           <template #title>Acerca de</template>
         </el-menu-item>
+
+        <!-- Enlaces temporales para testing -->
+        <el-divider />
+        <el-sub-menu index="auth-testing">
+          <template #title>
+            <el-icon><User /></el-icon>
+            <span>🧪 Testing Auth</span>
+          </template>
+          <el-menu-item index="/login">
+            <template #title>Login</template>
+          </el-menu-item>
+          <el-menu-item index="/register">
+            <template #title>Registro</template>
+          </el-menu-item>
+          <el-menu-item index="/forgot-password">
+            <template #title>Recuperar Pass</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 
