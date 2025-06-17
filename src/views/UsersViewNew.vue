@@ -330,7 +330,7 @@ const saveUser = async () => {
             name: userForm.value.name,
             lastname: userForm.value.lastname,
             email: userForm.value.email,
-            rolId: userForm.value.rolId || undefined,
+            rol_id: userForm.value.rolId || undefined, // Conversión: rolId -> rol_id para backend
           }
 
           // Solo incluir contraseña si se proporcionó
@@ -350,7 +350,7 @@ const saveUser = async () => {
             lastname: userForm.value.lastname,
             email: userForm.value.email,
             password: userForm.value.password,
-            rolId: userForm.value.rolId,
+            rol_id: userForm.value.rolId, // Conversión: rolId -> rol_id para backend
           }
 
           console.log('🔍 Datos enviados al backend:', createData)

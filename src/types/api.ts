@@ -28,7 +28,7 @@ export interface CreateUserDto {
   lastname: string
   email: string
   password: string
-  rolId: number // Debe ser un número válido > 0
+  rol_id: number // Backend espera rol_id con underscore
 }
 
 export interface UpdateUserDto {
@@ -37,8 +37,17 @@ export interface UpdateUserDto {
   lastname?: string
   email?: string
   password?: string
-  rolId?: number
+  rol_id?: number // Backend espera rol_id con underscore
   isActive?: boolean
+}
+
+// DTOs para Roles
+export interface CreateRoleDto {
+  name: string
+}
+
+export interface UpdateRoleDto {
+  name?: string
 }
 
 export interface PaginationParams {

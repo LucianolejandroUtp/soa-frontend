@@ -67,13 +67,16 @@ export const useUserStore = defineStore('users', () => {
       loading.value = false
     }
   }
-
   const fetchRoles = async () => {
     try {
-      roles.value = await RoleService.getRoles()
+      console.log('🔄 Cargando roles desde el backend...')
+      roles.value = await RoleService.getActiveRoles()
+      console.log('✅ Roles cargados:', roles.value)
     } catch (error) {
-      console.error('Error fetching roles:', error)
+      console.error('❌ Error fetching roles:', error)
       ElMessage.error('Error al cargar roles')
+      // En caso de error, usar array vacío
+      roles.value = []
     }
   }
 

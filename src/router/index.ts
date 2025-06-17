@@ -40,6 +40,11 @@ const router = createRouter({
           component: () => import('../views/UsersViewNew.vue'),
         },
         {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('../views/RolesView.vue'),
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('../views/AboutView.vue'), // Temporal

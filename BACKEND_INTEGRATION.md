@@ -142,13 +142,24 @@ VITE_APP_TITLE=SOA Admin Panel
 - `getRoleIds()` - Constantes de roles basadas en BD ✅
 - `getRoleName(id)` - Mapeo ID → Nombre ✅
 
-#### **RoleService:** ⚠️ **PREPARADO SIN BACKEND**
+#### **RoleService:** ✅ **COMPLETAMENTE FUNCIONAL**
 
-- `getRoles()` - ❌ No hay endpoint
-- `getRoleById(id)` - ❌ No hay endpoint
-- `createRole(data)` - ❌ No hay endpoint
+- `getRoles(activeOnly)` - ✅ Obtener todos los roles o solo activos
+- `getRoleById(id)` - ✅ Obtener rol específico
+- `createRole(data)` - ✅ Crear nuevo rol
+- `updateRole(id, data)` - ✅ Actualizar rol existente
+- `deleteRole(id)` - ✅ Eliminar rol
+- `deactivateRole(id)` - ✅ Desactivar rol
+- `activateRole(id)` - ✅ Activar rol
+- `getActiveRoles()` - ✅ Método de conveniencia para roles activos
 
-**Nota:** Los roles se manejan como constantes hardcodeadas basadas en la BD real.
+**Características:**
+
+- Conectado a endpoints reales del backend
+- Manejo de filtros por estado (active=true)
+- Soporte completo para CRUD de roles
+- Logging detallado para debugging
+- Manejo de errores robusto
 
 ### 💾 **Estado del Store/Gestión de Estado:**
 

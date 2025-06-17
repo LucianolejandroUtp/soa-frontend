@@ -97,13 +97,13 @@ export class UserService {
       lastname: userData.lastName,
       email: userData.email,
       password: userData.password,
-      rolId: this.ROLE_IDS.CLIENTE, // Asigna específicamente el rol de "cliente"
+      rol_id: this.ROLE_IDS.CLIENTE, // Asigna específicamente el rol de "cliente"
     }
 
     console.log('📤 Registrando nuevo usuario como CLIENTE:', {
       ...createUserDto,
       password: '[HIDDEN]',
-      rolId: `${createUserDto.rolId} (CLIENTE)`,
+      rol_id: `${createUserDto.rol_id} (CLIENTE)`,
     })
 
     try {

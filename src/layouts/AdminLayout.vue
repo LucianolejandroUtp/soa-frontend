@@ -30,6 +30,9 @@
           <el-menu-item index="/users">
             <template #title>Gestión de Usuarios</template>
           </el-menu-item>
+          <el-menu-item index="/roles">
+            <template #title>Gestión de Roles</template>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/settings">
