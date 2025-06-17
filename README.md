@@ -316,10 +316,10 @@ pnpm clean-install
 
 ```bash
 # Clonar tu fork
-git clone https://github.com/LucianolejandroUtp/soa-vue-project.git
+git clone https://github.com/LucianolejandroUtp/soa-frontend.git
 
 # Agregar upstream remoto
-git remote add upstream https://github.com/original-repo/soa-vue-project.git
+git remote add upstream https://github.com/original-repo/soa-frontend.git
 
 # Instalar dependencias
 pnpm install
