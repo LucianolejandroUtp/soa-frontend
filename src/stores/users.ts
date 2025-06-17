@@ -47,6 +47,8 @@ export const useUserStore = defineStore('users', () => {
         page: currentPage.value,
         limit: pageSize.value,
         search: filters.value.search,
+        roleId: filters.value.roleId,
+        isActive: filters.value.isActive,
         ...params,
       }
 
@@ -79,8 +81,13 @@ export const useUserStore = defineStore('users', () => {
     loading.value = true
     try {
       const newUser = await UserService.createUser(userData)
-      users.value.unshift(newUser)
-      total.value += 1
+
+      // Ir a la primera página para ver el nuevo usuario (ya que se agrega al inicio)
+      currentPage.value = 1
+
+      // Refetch toda la lista para obtener datos completos con relaciones
+      await fetchUsers()
+
       ElMessage.success('Usuario creado exitosamente')
       return newUser
     } catch (error) {
@@ -91,15 +98,14 @@ export const useUserStore = defineStore('users', () => {
       loading.value = false
     }
   }
-
   const updateUser = async (userData: UpdateUserDto) => {
     loading.value = true
     try {
       const updatedUser = await UserService.updateUser(userData)
-      const index = users.value.findIndex((u) => u.id === updatedUser.id)
-      if (index !== -1) {
-        users.value[index] = updatedUser
-      }
+
+      // Refetch para obtener datos completos con relaciones actualizadas
+      await fetchUsers()
+
       ElMessage.success('Usuario actualizado exitosamente')
       return updatedUser
     } catch (error) {
@@ -138,11 +144,25 @@ export const useUserStore = defineStore('users', () => {
       ElMessage.error('Error al cargar usuario')
     }
   }
-
   const updateFilters = (newFilters: Partial<UserFilters>) => {
     filters.value = { ...filters.value, ...newFilters }
     currentPage.value = 1 // Reset página al filtrar
     fetchUsers()
+  }
+
+  const setFilters = (newFilters: Partial<UserFilters>) => {
+    // Normalizar undefined a null para filtros booleanos y numéricos
+    const normalizedFilters = { ...newFilters }
+
+    if ('isActive' in normalizedFilters && normalizedFilters.isActive === undefined) {
+      normalizedFilters.isActive = null
+    }
+
+    if ('roleId' in normalizedFilters && normalizedFilters.roleId === undefined) {
+      normalizedFilters.roleId = null
+    }
+
+    filters.value = { ...filters.value, ...normalizedFilters }
   }
 
   const changePage = (page: number) => {
@@ -185,9 +205,7 @@ export const useUserStore = defineStore('users', () => {
     // Computed
     totalPages,
     hasUsers,
-    activeUsers,
-
-    // Acciones
+    activeUsers, // Acciones
     fetchUsers,
     fetchRoles,
     createUser,
@@ -195,6 +213,7 @@ export const useUserStore = defineStore('users', () => {
     deleteUser,
     setCurrentUser,
     updateFilters,
+    setFilters,
     changePage,
     changePageSize,
     resetFilters,

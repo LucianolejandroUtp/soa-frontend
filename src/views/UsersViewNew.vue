@@ -46,8 +46,6 @@
         v-loading="loading"
         empty-text="No hay usuarios disponibles"
       >
-        <el-table-column type="selection" width="55" />
-
         <el-table-column prop="id" label="ID" width="80" />
 
         <el-table-column label="Usuario" width="250">
@@ -63,8 +61,7 @@
             </div>
           </template>
         </el-table-column>
-
-        <el-table-column label="Rol" width="120">
+        <el-table-column label="Rol" width="120" align="center">
           <template #default="scope">
             <el-tag :type="getRoleTagType(getRoleName(scope.row))">
               {{ getRoleName(scope.row) }}
@@ -72,28 +69,35 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Estado" width="120">
+        <el-table-column label="Estado" width="120" align="center">
           <template #default="scope">
             <el-tag :type="scope.row.isActive ? 'success' : 'danger'">
               {{ scope.row.isActive ? 'Activo' : 'Inactivo' }}
             </el-tag>
           </template>
         </el-table-column>
-
-        <el-table-column label="Fecha Registro" width="150">
+        <el-table-column label="Fecha Registro" width="150" align="center">
           <template #default="scope">
-            {{ new Date(scope.row.createdAt).toLocaleDateString() }}
+            {{
+              new Date(scope.row.createdAt).toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            }}
           </template>
         </el-table-column>
 
-        <el-table-column label="Acciones" width="180">
+        <el-table-column label="Acciones" width="180" align="center">
           <template #default="scope">
-            <el-button size="small" type="primary" :icon="Edit" @click="editUser(scope.row)">
-              Editar
-            </el-button>
-            <el-button size="small" type="danger" :icon="Delete" @click="deleteUser(scope.row)">
-              Eliminar
-            </el-button>
+            <div class="action-buttons">
+              <el-button size="small" type="primary" :icon="Edit" @click="editUser(scope.row)">
+                Editar
+              </el-button>
+              <el-button size="small" type="danger" :icon="Delete" @click="deleteUser(scope.row)">
+                Eliminar
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -140,9 +144,8 @@
             show-password
           />
         </el-form-item>
-
         <el-form-item label="Rol" prop="rolId">
-          <el-select v-model="userForm.rolId" style="width: 100%">
+          <el-select v-model="userForm.rolId" style="width: 100%" placeholder="Seleccionar rol">
             <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
           </el-select>
         </el-form-item>
@@ -162,7 +165,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/users'
 import type { User, CreateUserDto, UpdateUserDto } from '@/types/api'
@@ -175,17 +178,27 @@ const showCreateDialog = ref(false)
 const isEditing = ref(false)
 const userFormRef = ref()
 
-// Filtros locales
-const statusFilter = ref<boolean | null>(null)
-const roleFilter = ref<number | null>(null)
+// Filtros locales sincronizados con el store
+const statusFilter = computed({
+  get: () => userStore.filters.isActive,
+  set: (value: boolean | null) => userStore.setFilters({ isActive: value }),
+})
+
+const roleFilter = computed({
+  get: () => userStore.filters.roleId,
+  set: (value: number | null) => userStore.setFilters({ roleId: value }),
+})
 
 // Datos de formulario
-const userForm = ref<CreateUserDto & { id?: number }>({
+const userForm = ref<
+  | (CreateUserDto & { id?: number })
+  | { name: string; lastname: string; email: string; password: string; rolId: null; id?: number }
+>({
   name: '',
   lastname: '',
   email: '',
   password: '',
-  rolId: 0,
+  rolId: null, // Forzar selección de rol
 })
 
 // Reglas de validación
@@ -202,11 +215,41 @@ const userRules = computed(() => ({
       : [{ required: true, message: 'La contraseña es requerida', trigger: 'blur' }]),
     { min: 6, message: 'La contraseña debe tener al menos 6 caracteres', trigger: 'blur' },
   ],
-  rolId: [{ required: true, message: 'El rol es requerido', trigger: 'change' }],
+  rolId: [
+    { required: true, message: 'El rol es requerido', trigger: 'change' },
+    { type: 'number', min: 1, message: 'Debe seleccionar un rol válido', trigger: 'change' },
+  ],
 }))
 
-// Computed properties del store
-const users = computed(() => (userStore.users || []).filter((user) => !user.deleted))
+// Computed properties del store con filtrado local adicional
+const users = computed(() => {
+  let filteredUsers = (userStore.users || []).filter((user) => !user.deleted)
+  // Aplicar filtros locales si el backend no los soporta
+  const currentFilters = userStore.filters
+
+  // Filtro de búsqueda por texto
+  if (currentFilters.search && currentFilters.search.trim()) {
+    const searchTerm = currentFilters.search.toLowerCase()
+    filteredUsers = filteredUsers.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchTerm) ||
+        user.lastname.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm),
+    )
+  }
+
+  // Filtro por estado (activo/inactivo) - solo aplicar si hay un valor específico
+  if (currentFilters.isActive !== null) {
+    filteredUsers = filteredUsers.filter((user) => user.isActive === currentFilters.isActive)
+  }
+
+  // Filtro por rol - solo aplicar si hay un valor específico
+  if (currentFilters.roleId !== null) {
+    filteredUsers = filteredUsers.filter((user) => user.rolId === currentFilters.roleId)
+  }
+
+  return filteredUsers
+})
 const roles = computed(() =>
   (userStore.roles || []).filter((role) => role.isActive && !role.deleted),
 )
@@ -222,7 +265,7 @@ const pageSize = computed({
 const total = computed(() => userStore.total)
 const searchQuery = computed({
   get: () => userStore.filters.search,
-  set: (value: string) => userStore.updateFilters({ search: value }),
+  set: (value: string) => userStore.setFilters({ search: value }),
 })
 
 // Métodos
@@ -287,17 +330,21 @@ const saveUser = async () => {
             name: userForm.value.name,
             lastname: userForm.value.lastname,
             email: userForm.value.email,
-            rolId: userForm.value.rolId,
+            rolId: userForm.value.rolId || undefined,
           }
 
           // Solo incluir contraseña si se proporcionó
           if (userForm.value.password) {
             updateData.password = userForm.value.password
           }
-
           await userStore.updateUser(updateData)
         } else {
           // Crear nuevo usuario
+          if (!userForm.value.rolId || userForm.value.rolId <= 0) {
+            ElMessage.error('Debe seleccionar un rol válido')
+            return
+          }
+
           const createData: CreateUserDto = {
             name: userForm.value.name,
             lastname: userForm.value.lastname,
@@ -306,6 +353,7 @@ const saveUser = async () => {
             rolId: userForm.value.rolId,
           }
 
+          console.log('🔍 Datos enviados al backend:', createData)
           await userStore.createUser(createData)
         }
 
@@ -324,7 +372,7 @@ const resetForm = () => {
     lastname: '',
     email: '',
     password: '',
-    rolId: 0,
+    rolId: null, // Forzar selección de rol
   }
   isEditing.value = false
   userFormRef.value?.resetFields()
@@ -339,11 +387,9 @@ const handleCurrentChange = (val: number) => {
 }
 
 const applyFilters = () => {
-  userStore.updateFilters({
-    search: searchQuery.value,
-    roleId: roleFilter.value,
-    isActive: statusFilter.value,
-  })
+  // Los filtros se aplican automáticamente por los computed properties
+  // Hacer refetch para sincronizar con el backend
+  userStore.fetchUsers()
 }
 
 // Inicialización
@@ -396,6 +442,18 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-buttons .el-button {
+  width: 80px;
+  margin: 0;
 }
 
 .dialog-footer {

@@ -28,7 +28,7 @@ export interface CreateUserDto {
   lastname: string
   email: string
   password: string
-  rolId: number
+  rolId: number // Debe ser un número válido > 0
 }
 
 export interface UpdateUserDto {
@@ -45,6 +45,8 @@ export interface PaginationParams {
   page?: number
   limit?: number
   search?: string
+  roleId?: number | null
+  isActive?: boolean | null
 }
 
 export interface PaginatedResponse<T> {
