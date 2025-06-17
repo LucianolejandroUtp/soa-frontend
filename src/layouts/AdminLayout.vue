@@ -6,7 +6,6 @@
         <h3 v-if="!isCollapse">Mi Admin</h3>
         <span v-else>MA</span>
       </div>
-
       <el-menu
         :default-active="activeMenu"
         class="sidebar-menu"
@@ -15,8 +14,11 @@
         text-color="#bfcbd9"
         active-text-color="#409EFF"
         router
-      >
-        <el-menu-item index="/">
+        :unique-opened="true"
+        :collapse-transition="true"
+        @open="handleSubMenuOpen"
+        @close="handleSubMenuClose"
+        ><el-menu-item index="/">
           <el-icon><House /></el-icon>
           <template #title>Dashboard</template>
         </el-menu-item>
@@ -25,7 +27,9 @@
             <el-icon><User /></el-icon>
             <span>Usuarios</span>
           </template>
-          <el-menu-item index="/users">Gestión de Usuarios</el-menu-item>
+          <el-menu-item index="/users">
+            <template #title>Gestión de Usuarios</template>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/settings">
@@ -102,6 +106,15 @@ const currentPageTitle = computed(() => {
 const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
 }
+
+// Handlers para eventos del menú (mejora la UX)
+const handleSubMenuOpen = (index: string) => {
+  console.log('Submenú abierto:', index)
+}
+
+const handleSubMenuClose = (index: string) => {
+  console.log('Submenú cerrado:', index)
+}
 </script>
 
 <style scoped>
@@ -116,10 +129,17 @@ const toggleSidebar = () => {
 
 .sidebar {
   background-color: #304156;
-  transition: width 0.3s;
+  transition: width 0.3s ease-in-out;
   flex-shrink: 0;
   height: 100vh;
   overflow-y: auto;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-menu {
+  border-right: none;
+  height: calc(100vh - 60px);
+  width: 100%;
 }
 
 .main-container {
@@ -138,11 +158,6 @@ const toggleSidebar = () => {
   background-color: #263445;
   color: white;
   font-weight: bold;
-}
-
-.sidebar-menu {
-  border-right: none;
-  height: calc(100vh - 60px);
 }
 
 .app-header {
