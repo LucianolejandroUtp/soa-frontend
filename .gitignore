@@ -20,6 +20,10 @@ coverage
 .env.test.local
 .env.production.local
 
+# Archivos generados automáticamente
+components.d.ts
+auto-imports.d.ts
+
 # Permitir .env.development (datos genéricos)
 !.env.development
 
