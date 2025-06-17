@@ -18,22 +18,21 @@
         :collapse-transition="true"
         @open="handleSubMenuOpen"
         @close="handleSubMenuClose"
-        ><el-menu-item index="/">
+      >
+        <el-menu-item index="/">
           <el-icon><House /></el-icon>
           <template #title>Dashboard</template>
         </el-menu-item>
-        <el-sub-menu index="users">
-          <template #title>
-            <el-icon><User /></el-icon>
-            <span>Usuarios</span>
-          </template>
-          <el-menu-item index="/users">
-            <template #title>Gestión de Usuarios</template>
-          </el-menu-item>
-          <el-menu-item index="/roles">
-            <template #title>Gestión de Roles</template>
-          </el-menu-item>
-        </el-sub-menu>
+
+        <el-menu-item index="/users">
+          <el-icon><User /></el-icon>
+          <template #title>Usuarios</template>
+        </el-menu-item>
+
+        <el-menu-item index="/roles">
+          <el-icon><UserFilled /></el-icon>
+          <template #title>Roles</template>
+        </el-menu-item>
 
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
@@ -106,7 +105,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { House, User, Setting, InfoFilled, Fold } from '@element-plus/icons-vue'
+import { House, User, UserFilled, Setting, InfoFilled, Fold } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -118,6 +117,7 @@ const currentPageTitle = computed(() => {
     '/': 'Dashboard',
     '/users': 'Usuarios',
     '/users/create': 'Crear Usuario',
+    '/roles': 'Roles',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }
