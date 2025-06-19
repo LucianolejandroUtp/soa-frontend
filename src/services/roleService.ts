@@ -3,9 +3,7 @@ import apiClient from './api'
 import type { Role, CreateRoleDto, UpdateRoleDto } from '@/types/api'
 
 export class RoleService {
-  private static readonly BASE_PATH = '/roles'
-
-  /**
+  private static readonly BASE_PATH = '/roles' /**
    * Obtener todos los roles
    * @param activeOnly - Si es true, solo obtiene roles activos
    */
@@ -13,9 +11,7 @@ export class RoleService {
     const params = activeOnly ? { active: 'true' } : {}
     const response = await apiClient.get(this.BASE_PATH, { params })
 
-    console.log('📥 Respuesta getRoles:', response.data)
-
-    // El backend devuelve directamente el array de roles
+    // Según la documentación, el backend devuelve directamente el array de roles
     return Array.isArray(response.data) ? response.data : []
   }
 

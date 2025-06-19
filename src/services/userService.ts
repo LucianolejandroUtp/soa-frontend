@@ -39,11 +39,22 @@ export class UserService {
     if (isActive !== null && isActive !== undefined) {
       queryParams.isActive = isActive
     }
-    const response = await apiClient.get(this.BASE_PATH, {
-      params: queryParams,
-    })
+    try {
+      const response = await apiClient.get(this.BASE_PATH, {
+        params: queryParams,
+      })
 
-    return response.data
+      return response.data
+    } catch (error: unknown) {
+      console.error('❌ Error en UserService.getUsers:', error)
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('❌ Error response:', (error as { response: unknown }).response)
+      }
+      if (error && typeof error === 'object' && 'message' in error) {
+        console.error('❌ Error message:', (error as { message: string }).message)
+      }
+      throw error
+    }
   }
 
   /**
@@ -76,12 +87,12 @@ export class UserService {
    */
   static async deleteUser(id: number): Promise<void> {
     await apiClient.delete(`${this.BASE_PATH}/${id}`)
-  } /**
+  }
+  /**
    * Buscar usuarios por término
-   */
-  static async searchUsers(searchTerm: string): Promise<User[]> {
+   */ static async searchUsers(searchTerm: string): Promise<User[]> {
     const response = await this.getUsers({ search: searchTerm, limit: 50 })
-    return response.response?.users || []
+    return response.response.users || []
   } /**
    * Registrar un nuevo usuario (wrapper de createUser para registro público)
    * Asigna automáticamente el rol de "cliente" al usuario registrado
@@ -149,7 +160,7 @@ export class UserService {
       // Por ahora, simulamos validando que el usuario existe
       const users = await this.getUsers({ search: credentials.email, limit: 1 })
 
-      if (users.response?.users && users.response.users.length > 0) {
+      if (users.response && users.response.users && users.response.users.length > 0) {
         const user = users.response.users[0]
 
         // TODO: En un entorno real, el backend validaría la contraseña

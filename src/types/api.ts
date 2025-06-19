@@ -28,7 +28,7 @@ export interface CreateUserDto {
   lastname: string
   email: string
   password: string
-  rol_id: number // Backend espera rol_id con underscore
+  rolId: number // Backend espera rol_id con underscore
 }
 
 export interface UpdateUserDto {
@@ -37,7 +37,7 @@ export interface UpdateUserDto {
   lastname?: string
   email?: string
   password?: string
-  rol_id?: number // Backend espera rol_id con underscore
+  rolId?: number // Backend espera rol_id con underscore
   isActive?: boolean
 }
 
@@ -60,16 +60,16 @@ export interface PaginationParams {
 
 export interface PaginatedResponse<T> {
   response: {
-    users: T[]
+    users: T[] // Los usuarios están anidados dentro de response.users
     count: number
   }
   pagination: {
     currentPage: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
     itemsPerPage: number
     totalItems: number
     totalPages: number
-    hasNextPage: boolean
-    hasPreviousPage: boolean
   }
 }
 

@@ -1,279 +1,324 @@
 <template>
   <div class="users-page">
-    <!-- Header con botón de nuevo usuario -->
+    <!-- Header -->
     <div class="page-header">
-      <h2>Gestión de Usuarios</h2>
-      <el-button type="primary" :icon="Plus" @click="showCreateDialog = true">
-        Nuevo Usuario
-      </el-button>
+      <h1>Gestión de Usuarios</h1>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nuevo Usuario </el-button>
     </div>
-
     <!-- Filtros y búsqueda -->
     <el-card class="filter-card">
-      <el-row :gutter="20">
-        <el-col :span="8">
+      <el-row :gutter="16" align="middle">
+        <el-col :span="6">
           <el-input
             v-model="searchQuery"
-            placeholder="Buscar usuarios..."
+            placeholder="Buscar por nombre o email..."
             :prefix-icon="Search"
             clearable
+            @input="applyFilters"
           />
         </el-col>
         <el-col :span="6">
-          <el-select v-model="statusFilter" placeholder="Estado" clearable>
-            <el-option label="Activo" value="active" />
-            <el-option label="Inactivo" value="inactive" />
+          <el-select v-model="statusFilter" placeholder="Estado" clearable @change="applyFilters">
+            <el-option label="Activos" :value="true" />
+            <el-option label="Inactivos" :value="false" />
           </el-select>
         </el-col>
         <el-col :span="6">
-          <el-select v-model="roleFilter" placeholder="Rol" clearable>
-            <el-option label="Admin" value="admin" />
-            <el-option label="Usuario" value="user" />
-            <el-option label="Editor" value="editor" />
+          <el-select v-model="roleFilter" placeholder="Rol" clearable @change="applyFilters">
+            <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
           </el-select>
         </el-col>
-        <el-col :span="4">
+        <el-col :span="3">
           <el-button type="primary" @click="applyFilters">Filtrar</el-button>
         </el-col>
-      </el-row>
-    </el-card>
-
-    <!-- Tabla de usuarios -->
+        <el-col :span="3">
+          <el-button @click="resetFilters">Limpiar</el-button>
+        </el-col>
+      </el-row> </el-card
+    ><!-- Tabla de usuarios -->
     <el-card>
-      <el-table :data="filteredUsers" style="width: 100%" v-loading="loading">
-        <el-table-column type="selection" width="55" />
-
+      <el-table
+        :data="filteredUsers"
+        style="width: 100%"
+        v-loading="loading"
+        empty-text="No hay usuarios disponibles"
+      >
         <el-table-column prop="id" label="ID" width="80" />
 
-        <el-table-column label="Usuario" width="200">
+        <el-table-column label="Usuario" width="250">
           <template #default="scope">
             <div class="user-info">
-              <el-avatar :size="40" :src="scope.row.avatar" />
+              <el-avatar :size="40">
+                {{ scope.row.name.charAt(0).toUpperCase() }}
+              </el-avatar>
               <div class="user-details">
-                <div class="user-name">{{ scope.row.name }}</div>
+                <div class="user-name">{{ scope.row.name }} {{ scope.row.lastname }}</div>
                 <div class="user-email">{{ scope.row.email }}</div>
               </div>
             </div>
           </template>
         </el-table-column>
-
-        <el-table-column prop="role" label="Rol" width="120">
+        <el-table-column label="Rol" width="120" align="center">
           <template #default="scope">
-            <el-tag :type="getRoleTagType(scope.row.role)">
-              {{ scope.row.role }}
+            <el-tag :type="getRoleTagType(getRoleName(scope.row))">
+              {{ getRoleName(scope.row) }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="status" label="Estado" width="120">
+        <el-table-column label="Estado" width="120" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
-              {{ scope.row.status === 'active' ? 'Activo' : 'Inactivo' }}
+            <el-tag :type="scope.row.isActive ? 'success' : 'danger'">
+              {{ scope.row.isActive ? 'Activo' : 'Inactivo' }}
             </el-tag>
           </template>
         </el-table-column>
-
-        <el-table-column prop="createdAt" label="Fecha Registro" width="150" />
-
-        <el-table-column label="Acciones" width="180">
+        <el-table-column label="Fecha Registro" width="180">
           <template #default="scope">
-            <el-button size="small" type="primary" :icon="Edit" @click="editUser(scope.row)">
-              Editar
-            </el-button>
-            <el-button size="small" type="danger" :icon="Delete" @click="deleteUser(scope.row)">
-              Eliminar
-            </el-button>
+            {{ formatDate(scope.row.createdAt) }}
+          </template> </el-table-column
+        ><el-table-column label="Acciones" width="250" fixed="right">
+          <template #default="scope">
+            <el-tooltip content="Editar usuario" placement="top">
+              <el-button type="primary" size="small" :icon="Edit" @click="editUser(scope.row)" />
+            </el-tooltip>
+
+            <el-tooltip content="Eliminar usuario" placement="top">
+              <el-button type="danger" size="small" :icon="Delete" @click="deleteUser(scope.row)" />
+            </el-tooltip>
           </template>
         </el-table-column>
-      </el-table>
-
-      <!-- Paginación -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="totalUsers"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
-    </el-card>
-
-    <!-- Dialog para crear/editar usuario -->
+      </el-table> </el-card
+    ><!-- Dialog para crear/editar usuario -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="isEditing ? 'Editar Usuario' : 'Nuevo Usuario'"
-      width="500px"
+      :title="isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'"
+      width="500"
+      @close="resetForm"
     >
-      <el-form :model="userForm" :rules="userRules" ref="userFormRef" label-width="100px">
+      <el-form
+        ref="userFormRef"
+        :model="userForm"
+        :rules="userRules"
+        label-width="120px"
+        label-position="left"
+      >
         <el-form-item label="Nombre" prop="name">
-          <el-input v-model="userForm.name" />
+          <el-input
+            v-model="userForm.name"
+            placeholder="Ingrese el nombre"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item label="Apellido" prop="lastname">
+          <el-input
+            v-model="userForm.lastname"
+            placeholder="Ingrese el apellido"
+            maxlength="50"
+            show-word-limit
+          />
         </el-form-item>
 
         <el-form-item label="Email" prop="email">
-          <el-input v-model="userForm.email" type="email" />
+          <el-input v-model="userForm.email" type="email" placeholder="correo@ejemplo.com" />
         </el-form-item>
 
-        <el-form-item label="Rol" prop="role">
-          <el-select v-model="userForm.role" style="width: 100%">
-            <el-option label="Admin" value="admin" />
-            <el-option label="Usuario" value="user" />
-            <el-option label="Editor" value="editor" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="Estado" prop="status">
-          <el-switch
-            v-model="userForm.status"
-            active-text="Activo"
-            inactive-text="Inactivo"
-            active-value="active"
-            inactive-value="inactive"
+        <el-form-item label="Contraseña" prop="password" :required="!isEditing">
+          <el-input
+            v-model="userForm.password"
+            type="password"
+            :placeholder="isEditing ? 'Dejar vacío para mantener actual' : 'Mínimo 6 caracteres'"
+            show-password
           />
+        </el-form-item>
+
+        <el-form-item label="Rol" prop="rolId">
+          <el-select v-model="userForm.rolId" style="width: 100%" placeholder="Seleccionar rol">
+            <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
+          </el-select>
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <span class="dialog-footer">
+        <div class="dialog-footer">
           <el-button @click="showCreateDialog = false">Cancelar</el-button>
-          <el-button type="primary" @click="saveUser">
+          <el-button type="primary" @click="saveUser" :loading="loading">
             {{ isEditing ? 'Actualizar' : 'Crear' }}
           </el-button>
-        </span>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
+import { UserService } from '@/services/userService'
+import { RoleService } from '@/services/roleService'
+import type { User, Role, CreateUserDto, UpdateUserDto } from '@/types/api'
 
-interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  status: string
-  avatar: string
-  createdAt: string
-}
+// Referencias
+const userFormRef = ref<FormInstance>()
 
-// Estado reactivo
+// Estados reactivos
+const users = ref<User[]>([])
+const roles = ref<Role[]>([])
 const loading = ref(false)
-const searchQuery = ref('')
-const statusFilter = ref('')
-const roleFilter = ref('')
-const currentPage = ref(1)
-const pageSize = ref(10)
 const showCreateDialog = ref(false)
 const isEditing = ref(false)
-const userFormRef = ref()
-
-// Datos de ejemplo
-const users = ref<User[]>([
-  {
-    id: 1,
-    name: 'Juan Pérez',
-    email: 'juan@ejemplo.com',
-    role: 'admin',
-    status: 'active',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    createdAt: '2025-01-15',
-  },
-  {
-    id: 2,
-    name: 'María García',
-    email: 'maria@ejemplo.com',
-    role: 'user',
-    status: 'active',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    createdAt: '2025-02-10',
-  },
-  {
-    id: 3,
-    name: 'Carlos López',
-    email: 'carlos@ejemplo.com',
-    role: 'editor',
-    status: 'inactive',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    createdAt: '2025-03-05',
-  },
-])
+const searchQuery = ref('')
+const statusFilter = ref<boolean | null>(null)
+const roleFilter = ref<number | null>(null)
 
 // Formulario para crear/editar usuario
 const userForm = reactive({
   id: 0,
   name: '',
+  lastname: '',
   email: '',
-  role: 'user',
-  status: 'active',
+  password: '',
+  rolId: null as number | null,
 })
 
 // Reglas de validación
-const userRules = {
-  name: [{ required: true, message: 'El nombre es requerido', trigger: 'blur' }],
+const userRules: FormRules = reactive({
+  name: [
+    { required: true, message: 'El nombre es requerido', trigger: 'blur' },
+    { min: 2, message: 'El nombre debe tener al menos 2 caracteres', trigger: 'blur' },
+    { max: 50, message: 'El nombre no puede exceder 50 caracteres', trigger: 'blur' },
+  ],
+  lastname: [
+    { required: true, message: 'El apellido es requerido', trigger: 'blur' },
+    { min: 2, message: 'El apellido debe tener al menos 2 caracteres', trigger: 'blur' },
+    { max: 50, message: 'El apellido no puede exceder 50 caracteres', trigger: 'blur' },
+  ],
   email: [
     { required: true, message: 'El email es requerido', trigger: 'blur' },
     { type: 'email', message: 'Formato de email inválido', trigger: 'blur' },
   ],
-  role: [{ required: true, message: 'El rol es requerido', trigger: 'change' }],
-}
+  password: [
+    ...(isEditing.value
+      ? []
+      : [{ required: true, message: 'La contraseña es requerida', trigger: 'blur' }]),
+    { min: 6, message: 'La contraseña debe tener al menos 6 caracteres', trigger: 'blur' },
+  ],
+  rolId: [
+    { required: true, message: 'El rol es requerido', trigger: 'change' },
+    { type: 'number', min: 1, message: 'Debe seleccionar un rol válido', trigger: 'change' },
+  ],
+})
 
 // Computed
 const filteredUsers = computed(() => {
-  let filtered = users.value
+  // Verificar que users.value sea un array válido
+  if (!Array.isArray(users.value)) {
+    console.warn('⚠️ users.value no es un array:', users.value)
+    return []
+  }
 
+  let filtered = users.value.filter((user) => !user.deleted)
+
+  // Filtro por búsqueda
   if (searchQuery.value) {
+    const search = searchQuery.value.toLowerCase()
     filtered = filtered.filter(
       (user) =>
-        user.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.value.toLowerCase()),
+        user.name.toLowerCase().includes(search) ||
+        user.lastname.toLowerCase().includes(search) ||
+        user.email.toLowerCase().includes(search),
     )
   }
 
-  if (statusFilter.value) {
-    filtered = filtered.filter((user) => user.status === statusFilter.value)
+  // Filtro por estado - solo aplicar si hay un valor específico seleccionado
+  if (statusFilter.value !== null && statusFilter.value !== undefined) {
+    filtered = filtered.filter((user) => user.isActive === statusFilter.value)
   }
 
-  if (roleFilter.value) {
-    filtered = filtered.filter((user) => user.role === roleFilter.value)
+  // Filtro por rol - solo aplicar si hay un valor específico seleccionado
+  if (roleFilter.value !== null && roleFilter.value !== undefined) {
+    filtered = filtered.filter((user) => user.rolId === roleFilter.value)
   }
 
   return filtered
 })
 
-// Computed para el total de usuarios (sin side effects)
-const totalUsers = computed(() => filteredUsers.value.length)
-
 // Métodos
-const getRoleTagType = (role: string) => {
+const getRoleTagType = (roleName: string) => {
   const types: { [key: string]: string } = {
-    admin: 'danger',
-    editor: 'warning',
-    user: 'info',
+    administrador: 'danger',
+    vendedor: 'warning',
+    cliente: 'info',
   }
-  return types[role] || 'info'
+  return types[roleName.toLowerCase()] || 'info'
 }
 
-const applyFilters = () => {
-  // Los filtros se aplican automáticamente por computed
-  ElMessage.success('Filtros aplicados')
+const getRoleName = (user: User) => {
+  const role = roles.value.find((r) => r.id === user.rolId)
+  return role?.name || 'Sin rol'
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const fetchUsers = async () => {
+  try {
+    loading.value = true
+    const response = await UserService.getUsers({})
+
+    // Los usuarios están en response.response.users según la estructura real del backend
+    if (
+      response &&
+      response.response &&
+      response.response.users &&
+      Array.isArray(response.response.users)
+    ) {
+      users.value = response.response.users
+    } else {
+      console.warn('⚠️ La respuesta no tiene la estructura esperada:', response)
+      users.value = []
+    }
+  } catch (error) {
+    console.error('❌ Error al cargar usuarios:', error)
+    ElMessage.error('Error al cargar usuarios')
+    users.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchRoles = async () => {
+  try {
+    roles.value = await RoleService.getActiveRoles()
+  } catch (error) {
+    console.error('❌ Error al cargar roles:', error)
+    ElMessage.error('Error al cargar roles')
+  }
 }
 
 const editUser = (user: User) => {
   isEditing.value = true
-  Object.assign(userForm, user)
+  userForm.id = user.id
+  userForm.name = user.name
+  userForm.lastname = user.lastname
+  userForm.email = user.email
+  userForm.password = ''
+  userForm.rolId = user.rolId
   showCreateDialog.value = true
 }
 
 const deleteUser = async (user: User) => {
   try {
     await ElMessageBox.confirm(
-      `¿Estás seguro de eliminar al usuario ${user.name}?`,
+      `¿Estás seguro de eliminar al usuario "${user.name} ${user.lastname}"?`,
       'Confirmar eliminación',
       {
         confirmButtonText: 'Eliminar',
@@ -282,70 +327,100 @@ const deleteUser = async (user: User) => {
       },
     )
 
-    const index = users.value.findIndex((u) => u.id === user.id)
-    if (index > -1) {
-      users.value.splice(index, 1)
-      ElMessage.success('Usuario eliminado correctamente')
+    loading.value = true
+    await UserService.deleteUser(user.id)
+    ElMessage.success('Usuario eliminado exitosamente')
+    await fetchUsers()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Error deleting user:', error)
+      ElMessage.error('Error al eliminar usuario')
     }
-  } catch {
-    ElMessage.info('Eliminación cancelada')
+  } finally {
+    loading.value = false
   }
 }
 
 const saveUser = async () => {
   if (!userFormRef.value) return
 
-  await userFormRef.value.validate((valid: boolean) => {
+  await userFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
-      if (isEditing.value) {
-        // Actualizar usuario existente
-        const index = users.value.findIndex((u) => u.id === userForm.id)
-        if (index > -1) {
-          users.value[index] = {
-            ...userForm,
-            avatar: users.value[index].avatar,
-            createdAt: users.value[index].createdAt,
-          }
-        }
-        ElMessage.success('Usuario actualizado correctamente')
-      } else {
-        // Crear nuevo usuario
-        const newUser: User = {
-          ...userForm,
-          id: Date.now(),
-          avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-          createdAt: new Date().toISOString().split('T')[0],
-        }
-        users.value.push(newUser)
-        ElMessage.success('Usuario creado correctamente')
-      }
+      try {
+        loading.value = true
 
-      resetForm()
-      showCreateDialog.value = false
+        if (isEditing.value) {
+          const updateData: UpdateUserDto = {
+            id: userForm.id,
+            name: userForm.name,
+            lastname: userForm.lastname,
+            email: userForm.email,
+            rolId: userForm.rolId || undefined, // Corregido para enviar rol_id
+          }
+
+          if (userForm.password) {
+            updateData.password = userForm.password
+          }
+
+          await UserService.updateUser(updateData)
+          ElMessage.success('Usuario actualizado exitosamente')
+        } else {
+          const createData: CreateUserDto = {
+            name: userForm.name,
+            lastname: userForm.lastname,
+            email: userForm.email,
+            password: userForm.password,
+            rolId: userForm.rolId || 3, // Corregido para enviar rol_id
+          }
+
+          await UserService.createUser(createData)
+          ElMessage.success('Usuario creado exitosamente')
+        }
+
+        resetForm()
+        showCreateDialog.value = false
+        await fetchUsers()
+      } catch (error) {
+        console.error('Error saving user:', error)
+        ElMessage.error('Error al guardar usuario')
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
 
 const resetForm = () => {
-  Object.assign(userForm, {
-    id: 0,
-    name: '',
-    email: '',
-    role: 'user',
-    status: 'active',
-  })
+  userForm.id = 0
+  userForm.name = ''
+  userForm.lastname = ''
+  userForm.email = ''
+  userForm.password = ''
+  userForm.rolId = null
   isEditing.value = false
+  userFormRef.value?.resetFields()
 }
 
-const handleSizeChange = (val: number) => {
-  pageSize.value = val
+const applyFilters = () => {
+  // Los filtros se aplican automáticamente por computed
 }
 
-const handleCurrentChange = (val: number) => {
-  currentPage.value = val
+const resetFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = null
+  roleFilter.value = null
 }
+
+const openCreateDialog = () => {
+  resetForm()
+  showCreateDialog.value = true
+}
+
+// Inicialización
+onMounted(async () => {
+  await Promise.all([fetchUsers(), fetchRoles()])
+})
 </script>
-
 <style scoped>
 .users-page {
   width: 100%;
@@ -386,14 +461,9 @@ const handleCurrentChange = (val: number) => {
   color: #909399;
 }
 
-.pagination-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
 .dialog-footer {
   display: flex;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>
