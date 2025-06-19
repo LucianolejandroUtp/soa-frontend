@@ -1,5 +1,5 @@
 // Servicio para gestión de usuarios - Conectado al backend SOA-USERS
-import apiClient from './api'
+import { apiClientUsers } from './api'
 import type {
   User,
   CreateUserDto,
@@ -40,7 +40,7 @@ export class UserService {
       queryParams.isActive = isActive
     }
     try {
-      const response = await apiClient.get(this.BASE_PATH, {
+      const response = await apiClientUsers.get(this.BASE_PATH, {
         params: queryParams,
       })
 
@@ -61,15 +61,15 @@ export class UserService {
    * Obtener usuario por ID
    */
   static async getUserById(id: number): Promise<User> {
-    const response = await apiClient.get(`${this.BASE_PATH}/${id}`)
+    const response = await apiClientUsers.get(`${this.BASE_PATH}/${id}`)
     return response.data
   }
   /**
    * Crear nuevo usuario
    */
   static async createUser(userData: CreateUserDto): Promise<User> {
-    console.log('📤 Enviando al backend:', userData)
-    const response = await apiClient.post(this.BASE_PATH, userData)
+    console.log('📤 Enviando datos de usuario para creación:', userData)
+    const response = await apiClientUsers.post(this.BASE_PATH, userData)
     console.log('📥 Respuesta del backend:', response.data)
     return response.data
   }
@@ -78,7 +78,8 @@ export class UserService {
    * Actualizar usuario existente
    */
   static async updateUser(userData: UpdateUserDto): Promise<User> {
-    const response = await apiClient.put(this.BASE_PATH, userData)
+    console.log('📤 Enviando datos de usuario para actualización:', userData)
+    const response = await apiClientUsers.put(this.BASE_PATH, userData)
     return response.data
   }
 
@@ -86,7 +87,7 @@ export class UserService {
    * Eliminar usuario (borrado lógico)
    */
   static async deleteUser(id: number): Promise<void> {
-    await apiClient.delete(`${this.BASE_PATH}/${id}`)
+    await apiClientUsers.delete(`${this.BASE_PATH}/${id}`)
   }
   /**
    * Buscar usuarios por término
@@ -108,13 +109,13 @@ export class UserService {
       lastname: userData.lastName,
       email: userData.email,
       password: userData.password,
-      rol_id: this.ROLE_IDS.CLIENTE, // Asigna específicamente el rol de "cliente"
+      rolId: this.ROLE_IDS.CLIENTE, // Asigna específicamente el rol de "cliente"
     }
 
     console.log('📤 Registrando nuevo usuario como CLIENTE:', {
       ...createUserDto,
       password: '[HIDDEN]',
-      rol_id: `${createUserDto.rol_id} (CLIENTE)`,
+      rolId: `${createUserDto.rolId} (CLIENTE)`,
     })
 
     try {

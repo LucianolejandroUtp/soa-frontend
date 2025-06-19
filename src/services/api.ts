@@ -1,46 +1,65 @@
 // Configuración base para Axios
-import axios from 'axios'
+import axios, { type AxiosInstance } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:2221/api'
+// URLs de las APIs - En desarrollo usar proxy, en producción URLs completas
+const API_USERS_URL = import.meta.env.PROD
+  ? import.meta.env.VITE_API_USERS_URL || 'http://localhost:2221/api'
+  : '/api'
 
-// Instancia de Axios configurada
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-})
+const API_EVENTS_URL = import.meta.env.PROD
+  ? import.meta.env.VITE_API_EVENTS_URL || 'http://localhost:2222/api'
+  : '/api'
 
-// Interceptor para requests (agregar auth token si existe)
-apiClient.interceptors.request.use(
-  (config) => {
-    // Aquí puedes agregar el token de autenticación cuando lo implementes
-    // const token = localStorage.getItem('auth_token')
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`
-    // }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  },
-)
+/**
+ * Crea y configura una instancia de Axios.
+ * @param baseURL La URL base para la instancia del cliente.
+ * @returns Una instancia de Axios configurada.
+ */
+const createApiClient = (baseURL: string): AxiosInstance => {
+  const client = axios.create({
+    baseURL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 10000,
+  })
 
-// Interceptor para responses (manejo global de errores)
-apiClient.interceptors.response.use(
-  (response) => {
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      // Redirigir a login o limpiar auth
-      console.error('Usuario no autorizado')
-    } else if (error.response?.status === 500) {
-      console.error('Error del servidor')
-    }
-    return Promise.reject(error)
-  },
-)
+  // Interceptor para requests (agregar auth token si existe)
+  client.interceptors.request.use(
+    (config) => {
+      // Aquí puedes agregar el token de autenticación cuando lo implementes
+      // const token = localStorage.getItem('auth_token')
+      // if (token) {
+      //   config.headers.Authorization = `Bearer ${token}`
+      // }
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
+    },
+  )
 
-export default apiClient
+  // Interceptor para responses (manejo global de errores)
+  client.interceptors.response.use(
+    (response) => {
+      return response
+    },
+    (error) => {
+      if (error.response?.status === 401) {
+        // Redirigir a login o limpiar auth
+        console.error('Usuario no autorizado')
+      } else if (error.response?.status === 500) {
+        console.error('Error del servidor')
+      }
+      return Promise.reject(error)
+    },
+  )
+
+  return client
+}
+
+// Instancia de Axios para la API de Usuarios
+export const apiClientUsers = createApiClient(API_USERS_URL)
+
+// Instancia de Axios para la API de Eventos
+export const apiClientEvents = createApiClient(API_EVENTS_URL)
