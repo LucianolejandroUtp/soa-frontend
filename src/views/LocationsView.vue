@@ -5,47 +5,36 @@
       <h1>Gestión de Ubicaciones</h1>
       <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nueva Ubicación </el-button>
     </div>
-
-    <!-- Filtros y búsqueda (Deshabilitados - Esperando implementación en backend) -->
+    <!-- Filtros y búsqueda -->
     <el-card class="filter-card">
       <el-row :gutter="16" align="middle">
         <el-col :span="6">
           <el-input
-            v-model="searchQuery"
-            placeholder="Buscar ubicaciones... (Próximamente)"
+            v-model="filters.search"
+            placeholder="Buscar ubicaciones..."
             :prefix-icon="Search"
             clearable
-            disabled
           />
         </el-col>
-        <el-col :span="6">
-          <el-select v-model="statusFilter" placeholder="Estado (Próximamente)" clearable disabled>
-            <el-option label="Activas" :value="true" />
-            <el-option label="Inactivas" :value="false" />
+        <el-col :span="4">
+          <el-select v-model="filters.status" placeholder="Estado" clearable>
+            <el-option label="Todos" value="" />
+            <el-option label="Activas" value="active" />
+            <el-option label="Inactivas" value="inactive" />
           </el-select>
         </el-col>
-        <el-col :span="6">
-          <el-input-number
-            v-model="capacityFilter"
-            placeholder="Capacidad mínima"
-            :min="0"
-            disabled
-            style="width: 100%"
-          />
+        <el-col :span="5">
+          <el-input v-model="filters.minCapacity" placeholder="Capacidad mínima" type="number" />
         </el-col>
         <el-col :span="3">
-          <el-button type="primary" disabled>Filtrar</el-button>
-        </el-col>
-        <el-col :span="3">
-          <el-button disabled>Limpiar</el-button>
+          <el-button @click="clearFilters">Limpiar</el-button>
         </el-col>
       </el-row>
     </el-card>
-
     <!-- Tabla de ubicaciones -->
     <el-card>
       <el-table
-        :data="locations"
+        :data="filteredLocations"
         style="width: 100%"
         v-loading="loading"
         empty-text="No hay ubicaciones disponibles"
@@ -194,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   Plus,
@@ -207,6 +196,7 @@ import {
   CloseBold,
 } from '@element-plus/icons-vue'
 import { LocationService } from '@/services/locationService'
+import { useFilters } from '@/composables/useFilters'
 import type { Location as LocationType, CreateLocationDto, UpdateLocationDto } from '@/types/api'
 
 // Referencias
@@ -218,10 +208,20 @@ const loading = ref(false)
 const showCreateDialog = ref(false)
 const isEditing = ref(false)
 
-// Mantener variables para la UI (aunque estén deshabilitadas)
-const searchQuery = ref('')
-const statusFilter = ref<boolean | null>(null)
-const capacityFilter = ref<number | null>(null)
+// Composable de filtros
+const { filters, clearFilters, filterArrayLocally } = useFilters<{
+  search: string
+  status: string
+  minCapacity: string
+}>({
+  storageKey: 'locations-filters',
+  debounceMs: 300,
+  initialFilters: {
+    search: '',
+    status: '',
+    minCapacity: '',
+  },
+})
 
 // Variables de paginación
 const currentPage = ref(1)
@@ -262,6 +262,27 @@ const formatDate = (dateString: string) => {
     day: 'numeric',
   })
 }
+
+// Computed para ubicaciones filtradas
+const filteredLocations = computed(() => {
+  const result = filterArrayLocally(locations.value, {
+    searchFields: ['name'],
+    customFilters: {
+      status: (location: LocationType, filterValue: string) => {
+        if (filterValue === 'active') return location.isActive
+        if (filterValue === 'inactive') return !location.isActive
+        return true // Si no hay filtro de estado, mostrar todas
+      },
+      minCapacity: (location: LocationType, filterValue: string) => {
+        if (!filterValue || filterValue === '') return true
+        const minCap = parseInt(filterValue)
+        return !isNaN(minCap) ? location.capacity >= minCap : true
+      },
+    },
+  })
+
+  return result
+})
 
 const fetchLocations = async () => {
   try {

@@ -5,46 +5,51 @@
       <h1>Gestión de Eventos</h1>
       <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nuevo Evento </el-button>
     </div>
-
-    <!-- Filtros y búsqueda (Deshabilitados - Esperando implementación en backend) -->
+    <!-- Filtros y búsqueda -->
     <el-card class="filter-card">
       <el-row :gutter="16" align="middle">
         <el-col :span="6">
           <el-input
-            v-model="searchQuery"
-            placeholder="Buscar eventos... (Próximamente)"
+            v-model="filters.search"
+            placeholder="Buscar eventos..."
             :prefix-icon="Search"
             clearable
-            disabled
           />
         </el-col>
-        <el-col :span="6">
-          <el-select v-model="statusFilter" placeholder="Estado (Próximamente)" clearable disabled>
-            <el-option label="Activos" :value="true" />
-            <el-option label="Inactivos" :value="false" />
+        <el-col :span="4">
+          <el-select v-model="filters.status" placeholder="Estado" clearable>
+            <el-option label="Todos" value="" />
+            <el-option label="Activos" value="active" />
+            <el-option label="Inactivos" value="inactive" />
           </el-select>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="4">
           <el-date-picker
-            v-model="dateFilter"
+            v-model="filters.dateFrom"
             type="date"
-            placeholder="Fecha (Próximamente)"
-            disabled
+            placeholder="Fecha desde"
+            format="DD/MM/YYYY"
+            value-format="YYYY-MM-DD"
+          />
+        </el-col>
+        <el-col :span="4">
+          <el-date-picker
+            v-model="filters.dateTo"
+            type="date"
+            placeholder="Fecha hasta"
+            format="DD/MM/YYYY"
+            value-format="YYYY-MM-DD"
           />
         </el-col>
         <el-col :span="3">
-          <el-button type="primary" disabled>Filtrar</el-button>
-        </el-col>
-        <el-col :span="3">
-          <el-button disabled>Limpiar</el-button>
+          <el-button @click="clearFilters">Limpiar</el-button>
         </el-col>
       </el-row>
     </el-card>
-
     <!-- Tabla de eventos -->
     <el-card>
       <el-table
-        :data="events"
+        :data="filteredEvents"
         style="width: 100%"
         v-loading="loading"
         empty-text="No hay eventos disponibles"
@@ -251,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   Plus,
@@ -264,6 +269,7 @@ import {
   CloseBold,
 } from '@element-plus/icons-vue'
 import { EventService } from '@/services/eventService'
+import { useFilters } from '@/composables/useFilters'
 import type { Event, CreateEventDto, UpdateEventDto } from '@/types/api'
 
 // Referencias
@@ -275,10 +281,22 @@ const loading = ref(false)
 const showCreateDialog = ref(false)
 const isEditing = ref(false)
 
-// Mantener variables para la UI (aunque estén deshabilitadas)
-const searchQuery = ref('')
-const statusFilter = ref<boolean | null>(null)
-const dateFilter = ref('')
+// Composable de filtros
+const { filters, clearFilters, filterArrayLocally } = useFilters<{
+  search: string
+  status: string
+  dateFrom: string
+  dateTo: string
+}>({
+  storageKey: 'events-filters',
+  debounceMs: 300,
+  initialFilters: {
+    search: '',
+    status: '',
+    dateFrom: '',
+    dateTo: '',
+  },
+})
 
 // Variables de paginación
 const currentPage = ref(1)
@@ -328,6 +346,32 @@ const formatDate = (dateString: string) => {
     minute: '2-digit',
   })
 }
+
+// Computed para eventos filtrados
+const filteredEvents = computed(() => {
+  const result = filterArrayLocally(events.value, {
+    searchFields: ['name', 'description'],
+    customFilters: {
+      status: (event: Event, filterValue: string) => {
+        if (filterValue === 'active') return event.isActive
+        if (filterValue === 'inactive') return !event.isActive
+        return true // Si no hay filtro de estado, mostrar todos
+      },
+      dateFrom: (event: Event, filterValue: string) => {
+        if (!filterValue) return true
+        const eventStart = new Date(event.startDate).toISOString().split('T')[0]
+        return eventStart >= filterValue
+      },
+      dateTo: (event: Event, filterValue: string) => {
+        if (!filterValue) return true
+        const eventStart = new Date(event.startDate).toISOString().split('T')[0]
+        return eventStart <= filterValue
+      },
+    },
+  })
+
+  return result
+})
 
 const fetchEvents = async () => {
   try {
