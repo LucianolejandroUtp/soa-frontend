@@ -1,6 +1,7 @@
 import { apiClientEvents } from './api'
 import type {
   EventLocation,
+  EventLocationBasic,
   CreateEventLocationDto,
   UpdateEventLocationDto,
   EventPaginationParams,
@@ -11,8 +12,8 @@ export class EventLocationService {
   /**
    * Obtener todas las relaciones evento-ubicación
    */
-  static async getAllEventLocations(): Promise<EventLocation[]> {
-    const response = await apiClientEvents.get<EventLocation[]>('/event-locations')
+  static async getAllEventLocations(): Promise<EventLocationBasic[]> {
+    const response = await apiClientEvents.get<EventLocationBasic[]>('/event-locations')
     return response.data
   }
 

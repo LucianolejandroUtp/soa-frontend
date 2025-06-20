@@ -23,26 +23,27 @@ export class LocationService {
     const response = await apiClientEvents.get<Location[]>('/locations/active')
     return response.data
   }
-
   /**
    * Obtener ubicaciones con paginación
    */
   static async getLocationsPaginated(
     params: LocationPaginationParams,
   ): Promise<EventPaginatedResponse<Location>> {
-    const queryParams = new URLSearchParams()
+    // Construir parámetros excluyendo valores undefined
+    const queryParams: Record<string, string | number> = {}
 
-    // La API de eventos usa page basado en 0, pero mostramos basado en 1 en la UI
     if (params.page !== undefined) {
-      queryParams.append('page', (params.page - 1).toString())
+      queryParams.page = params.page - 1 // La API usa page basado en 0
     }
 
     if (params.items !== undefined) {
-      queryParams.append('items', params.items.toString())
+      queryParams.items = params.items
     }
-
     const response = await apiClientEvents.get<EventPaginatedResponse<Location>>(
-      `/locations/paginated?${queryParams.toString()}`,
+      '/locations/paginated',
+      {
+        params: queryParams,
+      },
     )
 
     // Ajustar el currentPage para que sea basado en 1 para la UI
