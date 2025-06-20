@@ -4,30 +4,59 @@ import type { Role, CreateRoleDto, UpdateRoleDto } from '@/types/api'
 
 export class RoleService {
   private static readonly BASE_PATH = '/roles'
-
   /**
-   * Obtener todos los roles
-   * @param activeOnly - Si es true, solo obtiene roles activos
+   * Obtener todos los roles con paginación
+   * @param params - Parámetros de paginación y filtros
    */
-  static async getRoles(activeOnly: boolean = false): Promise<Role[]> {
-    const params = activeOnly ? { active: 'true' } : {}
+  static async getRoles(
+    params: {
+      page?: number
+      limit?: number
+      search?: string
+      activeOnly?: boolean
+    } = {},
+  ): Promise<{ roles: Role[]; total: number }> {
+    const { page = 1, limit = 10, search, activeOnly = false } = params
+
+    const queryParams: Record<string, string | number | boolean> = {
+      page,
+      items: limit,
+    }
+
+    if (search && search.trim()) {
+      queryParams.search = search.trim()
+    }
+
+    if (activeOnly) {
+      queryParams.active = 'true'
+    }
 
     console.log('🔍 [roleService] Haciendo petición GET a:', this.BASE_PATH)
-    console.log('🔍 [roleService] Parámetros enviados:', params)
-    console.log(
-      '🔍 [roleService] URL completa que se construirá:',
-      `${this.BASE_PATH}${activeOnly ? '?active=true' : ''}`,
-    )
+    console.log('🔍 [roleService] Parámetros enviados:', queryParams)
 
-    const response = await apiClientUsers.get(this.BASE_PATH, { params })
+    const response = await apiClientUsers.get(this.BASE_PATH, { params: queryParams })
 
     console.log('📥 [roleService] Respuesta completa del backend:', response)
     console.log('📥 [roleService] Status de respuesta:', response.status)
     console.log('📥 [roleService] Data de respuesta:', response.data)
-    console.log('📥 [roleService] Headers de respuesta:', response.headers)
 
-    // Según la documentación, el backend devuelve directamente el array de roles
-    return Array.isArray(response.data) ? response.data : []
+    // Si el backend devuelve directamente el array (sin paginación)
+    if (Array.isArray(response.data)) {
+      return {
+        roles: response.data,
+        total: response.data.length,
+      }
+    }
+
+    // Si el backend devuelve con estructura de paginación
+    if (response.data && response.data.response && Array.isArray(response.data.response.roles)) {
+      return {
+        roles: response.data.response.roles,
+        total: response.data.response.total || response.data.response.roles.length,
+      }
+    }
+
+    return { roles: [], total: 0 }
   }
 
   /**
@@ -99,11 +128,11 @@ export class RoleService {
 
     console.log(`✅ Rol ${id} activado`)
   }
-
   /**
    * Obtener solo roles activos (método de conveniencia)
    */
   static async getActiveRoles(): Promise<Role[]> {
-    return this.getRoles(true)
+    const result = await this.getRoles({ activeOnly: true, limit: 100 })
+    return result.roles
   }
 }

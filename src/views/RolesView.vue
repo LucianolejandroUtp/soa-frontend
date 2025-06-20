@@ -90,6 +90,20 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- Paginación -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="totalRoles"
+          :background="true"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
     <!-- Dialog para crear/editar rol -->
     <el-dialog
@@ -145,6 +159,11 @@ const isEditing = ref(false)
 const searchQuery = ref('')
 const statusFilter = ref<boolean | null>(null)
 
+// Variables de paginación
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalRoles = ref(0)
+
 // Formulario para crear/editar rol
 const roleForm = reactive({
   id: 0,
@@ -162,20 +181,9 @@ const roleRules: FormRules = reactive({
 
 // Computed
 const filteredRoles = computed(() => {
-  let filtered = roles.value.filter((role) => !role.deleted)
-
-  // Filtro por búsqueda
-  if (searchQuery.value) {
-    const search = searchQuery.value.toLowerCase()
-    filtered = filtered.filter((role) => role.name.toLowerCase().includes(search))
-  }
-
-  // Filtro por estado - solo aplicar si hay un valor específico seleccionado
-  if (statusFilter.value !== null && statusFilter.value !== undefined) {
-    filtered = filtered.filter((role) => role.isActive === statusFilter.value)
-  }
-
-  return filtered
+  // Ahora que la paginación y filtrado se hace del lado del servidor,
+  // simplemente retornamos los roles tal como vienen del backend
+  return Array.isArray(roles.value) ? roles.value : []
 })
 
 // Métodos
@@ -191,11 +199,21 @@ const fetchRoles = async () => {
   loading.value = true
   try {
     console.log('🔄 Cargando todos los roles...')
-    roles.value = await RoleService.getRoles() // Obtener todos los roles (activos e inactivos)
+    const result = await RoleService.getRoles({
+      page: currentPage.value,
+      limit: pageSize.value,
+      search: searchQuery.value || undefined,
+      activeOnly: statusFilter.value === true ? true : false,
+    })
+
+    roles.value = result.roles
+    totalRoles.value = result.total
     console.log('✅ Roles cargados:', roles.value)
   } catch (error) {
     console.error('❌ Error al cargar roles:', error)
     ElMessage.error('Error al cargar roles')
+    roles.value = []
+    totalRoles.value = 0
   } finally {
     loading.value = false
   }
@@ -303,12 +321,26 @@ const resetForm = () => {
 }
 
 const applyFilters = () => {
-  // Los filtros se aplican automáticamente por computed
+  currentPage.value = 1 // Reiniciar a la primera página cuando se aplican filtros
+  fetchRoles()
 }
 
 const resetFilters = () => {
   searchQuery.value = ''
   statusFilter.value = null
+  currentPage.value = 1
+  fetchRoles()
+}
+
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchRoles()
+}
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchRoles()
 }
 
 // Inicialización
@@ -334,6 +366,13 @@ onMounted(async () => {
 
 .filter-card {
   margin-bottom: 20px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding: 20px 0;
 }
 
 .dialog-footer {

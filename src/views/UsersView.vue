@@ -88,7 +88,21 @@
             </el-tooltip>
           </template>
         </el-table-column>
-      </el-table> </el-card
+      </el-table>
+
+      <!-- Paginación -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="totalUsers"
+          :background="true"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+        />
+      </div> </el-card
     ><!-- Dialog para crear/editar usuario -->
     <el-dialog
       v-model="showCreateDialog"
@@ -174,6 +188,11 @@ const searchQuery = ref('')
 const statusFilter = ref<boolean | null>(null)
 const roleFilter = ref<number | null>(null)
 
+// Variables de paginación
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalUsers = ref(0)
+
 // Formulario para crear/editar usuario
 const userForm = reactive({
   id: 0,
@@ -214,36 +233,9 @@ const userRules: FormRules = reactive({
 
 // Computed
 const filteredUsers = computed(() => {
-  // Verificar que users.value sea un array válido
-  if (!Array.isArray(users.value)) {
-    console.warn('⚠️ users.value no es un array:', users.value)
-    return []
-  }
-
-  let filtered = users.value.filter((user) => !user.deleted)
-
-  // Filtro por búsqueda
-  if (searchQuery.value) {
-    const search = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(
-      (user) =>
-        user.name.toLowerCase().includes(search) ||
-        user.lastname.toLowerCase().includes(search) ||
-        user.email.toLowerCase().includes(search),
-    )
-  }
-
-  // Filtro por estado - solo aplicar si hay un valor específico seleccionado
-  if (statusFilter.value !== null && statusFilter.value !== undefined) {
-    filtered = filtered.filter((user) => user.isActive === statusFilter.value)
-  }
-
-  // Filtro por rol - solo aplicar si hay un valor específico seleccionado
-  if (roleFilter.value !== null && roleFilter.value !== undefined) {
-    filtered = filtered.filter((user) => user.rolId === roleFilter.value)
-  }
-
-  return filtered
+  // Ahora que la paginación y filtrado se hace del lado del servidor,
+  // simplemente retornamos los usuarios tal como vienen del backend
+  return Array.isArray(users.value) ? users.value : []
 })
 
 // Métodos
@@ -272,9 +264,13 @@ const formatDate = (dateString: string) => {
 const fetchUsers = async () => {
   try {
     loading.value = true
-    const response = await UserService.getUsers({})
-
-    // Los usuarios están en response.response.users según la estructura real del backend
+    const response = await UserService.getUsers({
+      page: currentPage.value,
+      limit: pageSize.value,
+      search: searchQuery.value || undefined,
+      roleId: roleFilter.value || undefined,
+      isActive: statusFilter.value !== null ? statusFilter.value : undefined,
+    }) // Los usuarios están en response.response.users según la estructura real del backend
     if (
       response &&
       response.response &&
@@ -282,14 +278,18 @@ const fetchUsers = async () => {
       Array.isArray(response.response.users)
     ) {
       users.value = response.response.users
+      // Usar count de response o totalItems de pagination como fallback
+      totalUsers.value = response.response.count || response.pagination?.totalItems || 0
     } else {
       console.warn('⚠️ La respuesta no tiene la estructura esperada:', response)
       users.value = []
+      totalUsers.value = 0
     }
   } catch (error) {
     console.error('❌ Error al cargar usuarios:', error)
     ElMessage.error('Error al cargar usuarios')
     users.value = []
+    totalUsers.value = 0
   } finally {
     loading.value = false
   }
@@ -402,18 +402,32 @@ const resetForm = () => {
 }
 
 const applyFilters = () => {
-  // Los filtros se aplican automáticamente por computed
+  currentPage.value = 1 // Reiniciar a la primera página cuando se aplican filtros
+  fetchUsers()
 }
 
 const resetFilters = () => {
   searchQuery.value = ''
   statusFilter.value = null
   roleFilter.value = null
+  currentPage.value = 1
+  fetchUsers()
 }
 
 const openCreateDialog = () => {
   resetForm()
   showCreateDialog.value = true
+}
+
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  applyFilters()
+}
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchUsers()
 }
 
 // Inicialización
@@ -461,9 +475,16 @@ onMounted(async () => {
   color: #909399;
 }
 
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding: 20px 0;
+}
+
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 </style>
