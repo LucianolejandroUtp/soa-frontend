@@ -160,7 +160,7 @@ export interface UpdateLocationDto {
   deleted?: boolean
 }
 
-// Relación Evento-Ubicación
+// Relación Evento-Ubicación (estructura completa según documentación)
 export interface EventLocation {
   id: number
   name: string
@@ -177,6 +177,17 @@ export interface EventLocation {
     id: number
     name: string
   }
+}
+
+// Relación Evento-Ubicación (estructura actual de la API)
+export interface EventLocationBasic {
+  id: number
+  name: string
+  price: string // La API devuelve price como string
+  isActive: boolean
+  deleted: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CreateEventLocationDto {
