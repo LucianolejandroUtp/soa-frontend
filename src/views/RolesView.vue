@@ -60,12 +60,11 @@
             {{ formatDate(scope.row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="Acciones" width="250" fixed="right">
+        <el-table-column label="Acciones" width="300" fixed="right">
           <template #default="scope">
             <el-tooltip content="Editar rol" placement="top">
               <el-button type="primary" size="small" :icon="Edit" @click="editRole(scope.row)" />
             </el-tooltip>
-
             <el-tooltip
               :content="scope.row.isActive ? 'Desactivar rol' : 'Activar rol'"
               placement="top"
@@ -73,7 +72,7 @@
               <el-button
                 :type="scope.row.isActive ? 'warning' : 'success'"
                 size="small"
-                :icon="scope.row.isActive ? Lock : Unlock"
+                :icon="scope.row.isActive ? CloseBold : Check"
                 @click="toggleRoleStatus(scope.row)"
               />
             </el-tooltip>
@@ -144,7 +143,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search, Edit, Delete, Lock, Unlock } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Check, CloseBold } from '@element-plus/icons-vue'
 import { RoleService } from '@/services/roleService'
 import type { Role, CreateRoleDto, UpdateRoleDto } from '@/types/api'
 

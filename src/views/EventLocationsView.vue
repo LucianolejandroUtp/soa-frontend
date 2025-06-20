@@ -82,35 +82,34 @@
             </div>
           </template>
         </el-table-column>
-
-        <el-table-column label="Acciones" width="150" fixed="right">
+        <el-table-column label="Acciones" width="300" fixed="right">
           <template #default="scope">
-            <div class="action-buttons">
-              <el-button size="small" type="primary" @click="openEditDialog()">
-                <el-icon><Edit /></el-icon>
-              </el-button>
+            <el-tooltip content="Editar relación" placement="top">
+              <el-button size="small" type="primary" :icon="Edit" @click="openEditDialog()" />
+            </el-tooltip>
 
+            <el-tooltip
+              :content="scope.row.isActive ? 'Desactivar relación' : 'Activar relación'"
+              placement="top"
+            >
               <el-button
                 size="small"
                 :type="scope.row.isActive ? 'warning' : 'success'"
+                :icon="scope.row.isActive ? CloseBold : Check"
                 @click="toggleStatus(scope.row)"
-              >
-                <el-icon>
-                  <component :is="scope.row.isActive ? 'Hide' : 'View'" />
-                </el-icon>
-              </el-button>
+              />
+            </el-tooltip>
 
-              <el-popconfirm
-                title="¿Estás seguro de eliminar esta relación?"
-                @confirm="deleteEventLocation(scope.row.id)"
-              >
-                <template #reference>
-                  <el-button size="small" type="danger">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </template>
-              </el-popconfirm>
-            </div>
+            <el-popconfirm
+              title="¿Estás seguro de eliminar esta relación?"
+              @confirm="deleteEventLocation(scope.row.id)"
+            >
+              <template #reference>
+                <el-tooltip content="Eliminar relación" placement="top">
+                  <el-button size="small" type="danger" :icon="Delete" />
+                </el-tooltip>
+              </template>
+            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
@@ -211,7 +210,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search, Edit, Delete, Calendar } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Calendar, Check, CloseBold } from '@element-plus/icons-vue'
 import { EventLocationService } from '@/services/eventLocationService'
 import { EventService } from '@/services/eventService'
 import { LocationService } from '@/services/locationService'

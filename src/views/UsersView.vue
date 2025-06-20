@@ -77,10 +77,22 @@
           <template #default="scope">
             {{ formatDate(scope.row.createdAt) }}
           </template> </el-table-column
-        ><el-table-column label="Acciones" width="250" fixed="right">
+        ><el-table-column label="Acciones" width="300" fixed="right">
           <template #default="scope">
             <el-tooltip content="Editar usuario" placement="top">
               <el-button type="primary" size="small" :icon="Edit" @click="editUser(scope.row)" />
+            </el-tooltip>
+
+            <el-tooltip
+              :content="scope.row.isActive ? 'Desactivar usuario' : 'Activar usuario'"
+              placement="top"
+            >
+              <el-button
+                :type="scope.row.isActive ? 'warning' : 'success'"
+                size="small"
+                :icon="scope.row.isActive ? CloseBold : Check"
+                @click="toggleUserStatus(scope.row)"
+              />
             </el-tooltip>
 
             <el-tooltip content="Eliminar usuario" placement="top">
@@ -170,7 +182,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Check, CloseBold } from '@element-plus/icons-vue'
 import { UserService } from '@/services/userService'
 import { RoleService } from '@/services/roleService'
 import type { User, Role, CreateUserDto, UpdateUserDto } from '@/types/api'
@@ -337,6 +349,33 @@ const deleteUser = async (user: User) => {
     if (error !== 'cancel') {
       console.error('Error deleting user:', error)
       ElMessage.error('Error al eliminar usuario')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const toggleUserStatus = async (user: User) => {
+  try {
+    const action = user.isActive ? 'desactivar' : 'activar'
+    await ElMessageBox.confirm(
+      `¿Estás seguro de ${action} al usuario "${user.name} ${user.lastname}"?`,
+      `Confirmar ${action}`,
+      {
+        confirmButtonText: action.charAt(0).toUpperCase() + action.slice(1),
+        cancelButtonText: 'Cancelar',
+        type: 'warning',
+      },
+    )
+
+    loading.value = true
+    await UserService.updateUser({ id: user.id, isActive: !user.isActive })
+    ElMessage.success(`Usuario ${action}do exitosamente`)
+    await fetchUsers()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Error toggling user status:', error)
+      ElMessage.error(`Error al ${user.isActive ? 'desactivar' : 'activar'} usuario`)
     }
   } finally {
     loading.value = false
