@@ -39,10 +39,14 @@
           <el-icon><Calendar /></el-icon>
           <template #title>Eventos</template>
         </el-menu-item>
-
         <el-menu-item index="/locations">
           <el-icon><Location /></el-icon>
           <template #title>Ubicaciones</template>
+        </el-menu-item>
+
+        <el-menu-item index="/event-locations">
+          <el-icon><Connection /></el-icon>
+          <template #title>Relaciones</template>
         </el-menu-item>
 
         <el-divider />
@@ -127,6 +131,7 @@ import {
   Fold,
   Calendar,
   Location,
+  Connection,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -142,6 +147,7 @@ const currentPageTitle = computed(() => {
     '/roles': 'Roles',
     '/events': 'Eventos',
     '/locations': 'Ubicaciones',
+    '/event-locations': 'Relaciones Evento-Ubicación',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }
