@@ -45,6 +45,16 @@ const router = createRouter({
           component: () => import('../views/RolesView.vue'),
         },
         {
+          path: 'events',
+          name: 'events',
+          component: () => import('../views/EventsView.vue'),
+        },
+        {
+          path: 'locations',
+          name: 'locations',
+          component: () => import('../views/LocationsView.vue'),
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('../views/AboutView.vue'), // Temporal

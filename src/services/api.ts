@@ -4,11 +4,11 @@ import axios, { type AxiosInstance } from 'axios'
 // URLs de las APIs - En desarrollo usar proxy, en producción URLs completas
 const API_USERS_URL = import.meta.env.PROD
   ? import.meta.env.VITE_API_USERS_URL || 'http://localhost:2221/api'
-  : '/api'
+  : '/api' // Para usuarios y roles - proxy maneja la redirección
 
 const API_EVENTS_URL = import.meta.env.PROD
   ? import.meta.env.VITE_API_EVENTS_URL || 'http://localhost:2222/api'
-  : '/api'
+  : '/api' // Para eventos - proxy maneja la redirección específica
 
 /**
  * Crea y configura una instancia de Axios.

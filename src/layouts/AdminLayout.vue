@@ -28,11 +28,24 @@
           <el-icon><User /></el-icon>
           <template #title>Usuarios</template>
         </el-menu-item>
-
         <el-menu-item index="/roles">
           <el-icon><UserFilled /></el-icon>
           <template #title>Roles</template>
         </el-menu-item>
+
+        <el-divider />
+
+        <el-menu-item index="/events">
+          <el-icon><Calendar /></el-icon>
+          <template #title>Eventos</template>
+        </el-menu-item>
+
+        <el-menu-item index="/locations">
+          <el-icon><Location /></el-icon>
+          <template #title>Ubicaciones</template>
+        </el-menu-item>
+
+        <el-divider />
 
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
@@ -105,7 +118,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { House, User, UserFilled, Setting, InfoFilled, Fold } from '@element-plus/icons-vue'
+import {
+  House,
+  User,
+  UserFilled,
+  Setting,
+  InfoFilled,
+  Fold,
+  Calendar,
+  Location,
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -118,6 +140,8 @@ const currentPageTitle = computed(() => {
     '/users': 'Usuarios',
     '/users/create': 'Crear Usuario',
     '/roles': 'Roles',
+    '/events': 'Eventos',
+    '/locations': 'Ubicaciones',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }
