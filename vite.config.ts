@@ -27,6 +27,34 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // API de usuarios y roles (puerto 2221)
+      '/api/users': {
+        target: 'http://localhost:2221',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/roles': {
+        target: 'http://localhost:2221',
+        changeOrigin: true,
+        secure: false,
+      },
+      // API de eventos y ubicaciones (puerto 2222)
+      '/api/events': {
+        target: 'http://localhost:2222',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/locations': {
+        target: 'http://localhost:2222',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/event-locations': {
+        target: 'http://localhost:2222',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Fallback para otros endpoints /api/* (por defecto usuarios)
       '/api': {
         target: 'http://localhost:2221',
         changeOrigin: true,
