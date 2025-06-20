@@ -1,0 +1,546 @@
+<template>
+  <div class="event-locations-view">
+    <!-- Header con filtros -->
+    <el-card class="filter-card" shadow="never">
+      <div class="page-header">
+        <div>
+          <h2>Gestión de Relaciones Evento-Ubicación</h2>
+          <p class="page-subtitle">Administra las zonas y precios de los eventos</p>
+        </div>
+        <el-button type="primary" @click="openCreateDialog">
+          <el-icon><Plus /></el-icon>
+          Nueva Relación
+        </el-button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filters-container">
+        <el-row :gutter="16">
+          <el-col :span="6">
+            <el-input
+              v-model="filters.search"
+              placeholder="Buscar por nombre de zona..."
+              :prefix-icon="Search"
+              clearable
+            />
+          </el-col>
+          <el-col :span="4">
+            <el-select v-model="filters.status" placeholder="Estado" clearable>
+              <el-option label="Todos" value="" />
+              <el-option label="Activos" value="active" />
+              <el-option label="Inactivos" value="inactive" />
+            </el-select>
+          </el-col>
+          <el-col :span="4">
+            <el-button @click="clearFilters">
+              <el-icon><Delete /></el-icon>
+              Limpiar
+            </el-button>
+          </el-col>
+        </el-row>
+      </div>
+    </el-card>
+    <!-- Tabla principal -->
+    <el-card class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="filteredEventLocations"
+        style="width: 100%"
+        :empty-text="loading ? 'Cargando...' : 'No hay relaciones disponibles'"
+      >
+        <el-table-column prop="id" label="ID" width="80" />
+
+        <el-table-column prop="name" label="Zona/Nombre" min-width="200" />
+
+        <el-table-column label="Precio" width="120" sortable>
+          <template #default="scope">
+            <el-tag type="success" size="large">
+              ${{ parseFloat(scope.row.price).toLocaleString() }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Estado" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.isActive ? 'success' : 'danger'">
+              {{ scope.row.isActive ? 'Activo' : 'Inactivo' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Fechas" width="200">
+          <template #default="scope">
+            <div class="date-info">
+              <div class="date-created">
+                <el-icon><Calendar /></el-icon>
+                {{ formatDate(scope.row.createdAt) }}
+              </div>
+              <div v-if="scope.row.updatedAt !== scope.row.createdAt" class="date-updated">
+                <el-icon><Edit /></el-icon>
+                {{ formatDate(scope.row.updatedAt) }}
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Acciones" width="150" fixed="right">
+          <template #default="scope">
+            <div class="action-buttons">
+              <el-button size="small" type="primary" @click="openEditDialog()">
+                <el-icon><Edit /></el-icon>
+              </el-button>
+
+              <el-button
+                size="small"
+                :type="scope.row.isActive ? 'warning' : 'success'"
+                @click="toggleStatus(scope.row)"
+              >
+                <el-icon>
+                  <component :is="scope.row.isActive ? 'Hide' : 'View'" />
+                </el-icon>
+              </el-button>
+
+              <el-popconfirm
+                title="¿Estás seguro de eliminar esta relación?"
+                @confirm="deleteEventLocation(scope.row.id)"
+              >
+                <template #reference>
+                  <el-button size="small" type="danger">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </template>
+              </el-popconfirm>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- Paginación -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="pagination.currentPage"
+          v-model:page-size="pagination.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="pagination.total"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- Dialog para crear/editar -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEditing ? 'Editar Relación' : 'Nueva Relación'"
+      width="600px"
+      :before-close="handleDialogClose"
+    >
+      <el-form
+        ref="formRef"
+        v-loading="formLoading"
+        :model="formData"
+        :rules="formRules"
+        label-width="120px"
+        label-position="left"
+      >
+        <el-form-item label="Evento" prop="eventId">
+          <el-select
+            v-model="formData.event_id"
+            placeholder="Selecciona un evento"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="event in availableEvents"
+              :key="event.id"
+              :label="event.name"
+              :value="event.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="Ubicación" prop="locationId">
+          <el-select
+            v-model="formData.location_id"
+            placeholder="Selecciona una ubicación"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="location in availableLocations"
+              :key="location.id"
+              :label="`${location.name} (${location.capacity} personas)`"
+              :value="location.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="Zona/Nombre" prop="name">
+          <el-input v-model="formData.name" placeholder="Ej: VIP, General, Platino..." />
+        </el-form-item>
+
+        <el-form-item label="Precio" prop="price">
+          <el-input-number
+            v-model="formData.price"
+            :min="0"
+            :step="1000"
+            :precision="0"
+            style="width: 100%"
+            placeholder="Precio en COP"
+          />
+        </el-form-item>
+
+        <el-form-item v-if="isEditing" label="Estado" prop="isActive">
+          <el-switch v-model="formData.isActive" active-text="Activo" inactive-text="Inactivo" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">Cancelar</el-button>
+          <el-button type="primary" :loading="formLoading" @click="handleSubmit">
+            {{ isEditing ? 'Actualizar' : 'Crear' }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Plus, Search, Edit, Delete, Calendar } from '@element-plus/icons-vue'
+import { EventLocationService } from '@/services/eventLocationService'
+import { EventService } from '@/services/eventService'
+import { LocationService } from '@/services/locationService'
+import { useFilters } from '@/composables/useFilters'
+import type {
+  EventLocationBasic,
+  CreateEventLocationDto,
+  UpdateEventLocationDto,
+  Event,
+  Location,
+} from '@/types/api'
+
+// Estados reactivos
+const loading = ref(false)
+const formLoading = ref(false)
+const dialogVisible = ref(false)
+const isEditing = ref(false)
+const formRef = ref<FormInstance>()
+
+const eventLocations = ref<EventLocationBasic[]>([])
+const availableEvents = ref<Event[]>([])
+const availableLocations = ref<Location[]>([])
+
+const pagination = ref({
+  currentPage: 1,
+  pageSize: 20,
+  total: 0,
+})
+
+// Composable de filtros
+const { filters, clearFilters, filterArrayLocally } = useFilters<{
+  search: string
+  status: string
+}>({
+  storageKey: 'event-locations-filters',
+  debounceMs: 300,
+  initialFilters: {
+    search: '',
+    status: '',
+  },
+})
+
+// Datos del formulario
+const formData = ref<CreateEventLocationDto & { id?: number; isActive?: boolean }>({
+  event_id: 0,
+  location_id: 0,
+  name: '',
+  price: 0,
+})
+
+// Reglas de validación
+const formRules: FormRules = {
+  eventId: [{ required: true, message: 'Selecciona un evento', trigger: 'change' }],
+  locationId: [{ required: true, message: 'Selecciona una ubicación', trigger: 'change' }],
+  name: [
+    { required: true, message: 'El nombre de la zona es requerido', trigger: 'blur' },
+    { min: 2, max: 100, message: 'Entre 2 y 100 caracteres', trigger: 'blur' },
+  ],
+  price: [
+    { required: true, message: 'El precio es requerido', trigger: 'blur' },
+    { type: 'number', min: 0, message: 'El precio debe ser mayor o igual a 0', trigger: 'blur' },
+  ],
+}
+
+// Computed para relaciones filtradas
+const filteredEventLocations = computed(() => {
+  return filterArrayLocally(eventLocations.value, {
+    searchFields: ['name'],
+    customFilters: {
+      status: (eventLocation: EventLocationBasic, filterValue: string) => {
+        if (filterValue === 'active') return eventLocation.isActive
+        if (filterValue === 'inactive') return !eventLocation.isActive
+        return true
+      },
+    },
+  })
+})
+
+// Métodos
+const loadEventLocations = async (): Promise<void> => {
+  try {
+    loading.value = true
+    eventLocations.value = await EventLocationService.getAllEventLocations()
+    pagination.value.total = eventLocations.value.length
+  } catch (error) {
+    console.error('❌ Error al cargar relaciones evento-ubicación:', error)
+    ElMessage.error('Error al cargar las relaciones')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadAvailableEvents = async (): Promise<void> => {
+  try {
+    availableEvents.value = await EventService.getAllEvents()
+  } catch (error) {
+    console.error('Error al cargar eventos:', error)
+    ElMessage.error('Error al cargar los eventos disponibles')
+  }
+}
+
+const loadAvailableLocations = async (): Promise<void> => {
+  try {
+    availableLocations.value = await LocationService.getAllLocations()
+  } catch (error) {
+    console.error('Error al cargar ubicaciones:', error)
+    ElMessage.error('Error al cargar las ubicaciones disponibles')
+  }
+}
+
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const openCreateDialog = (): void => {
+  isEditing.value = false
+  formData.value = {
+    event_id: 0,
+    location_id: 0,
+    name: '',
+    price: 0,
+  }
+  dialogVisible.value = true
+}
+
+const openEditDialog = (): void => {
+  // TODO: Implementar edición cuando la API devuelva las relaciones completas
+  ElMessage.warning('La edición estará disponible cuando la API devuelva las relaciones completas')
+}
+
+const handleDialogClose = (done: () => void): void => {
+  if (formLoading.value) {
+    ElMessage.warning('Operación en progreso, por favor espera...')
+    return
+  }
+
+  if (formRef.value) {
+    formRef.value.resetFields()
+  }
+  done()
+}
+
+const handleSubmit = async (): Promise<void> => {
+  if (!formRef.value) return
+  try {
+    await formRef.value.validate()
+    formLoading.value = true
+
+    if (isEditing.value && formData.value.id) {
+      const updateData: UpdateEventLocationDto = {
+        id: formData.value.id,
+        event_id: formData.value.event_id,
+        location_id: formData.value.location_id,
+        name: formData.value.name,
+        price: formData.value.price,
+        is_active: formData.value.isActive || false,
+      }
+
+      await EventLocationService.updateEventLocation(updateData)
+      ElMessage.success('Relación actualizada exitosamente')
+    } else {
+      const createData: CreateEventLocationDto = {
+        event_id: formData.value.event_id,
+        location_id: formData.value.location_id,
+        name: formData.value.name,
+        price: formData.value.price,
+      }
+
+      await EventLocationService.createEventLocation(createData)
+      ElMessage.success('Relación creada exitosamente')
+    }
+
+    dialogVisible.value = false
+    await loadEventLocations()
+  } catch (error) {
+    console.error('Error al guardar relación:', error)
+    ElMessage.error('Error al guardar la relación')
+  } finally {
+    formLoading.value = false
+  }
+}
+
+const toggleStatus = async (eventLocation: EventLocationBasic): Promise<void> => {
+  try {
+    const action = eventLocation.isActive ? 'desactivar' : 'activar'
+    await ElMessageBox.confirm(`¿Estás seguro de ${action} esta relación?`, 'Confirmar acción', {
+      confirmButtonText: 'Sí, continuar',
+      cancelButtonText: 'Cancelar',
+      type: 'warning',
+    })
+
+    if (eventLocation.isActive) {
+      await EventLocationService.deactivateEventLocation(eventLocation.id)
+      ElMessage.success('Relación desactivada')
+    } else {
+      await EventLocationService.activateEventLocation(eventLocation.id)
+      ElMessage.success('Relación activada')
+    }
+
+    await loadEventLocations()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Error al cambiar estado:', error)
+      ElMessage.error('Error al cambiar el estado')
+    }
+  }
+}
+
+const deleteEventLocation = async (id: number): Promise<void> => {
+  try {
+    await EventLocationService.deleteEventLocation(id)
+    ElMessage.success('Relación eliminada exitosamente')
+    await loadEventLocations()
+  } catch (error) {
+    console.error('Error al eliminar relación:', error)
+    ElMessage.error('Error al eliminar la relación')
+  }
+}
+
+const handleSizeChange = (val: number): void => {
+  pagination.value.pageSize = val
+  pagination.value.currentPage = 1
+}
+
+const handleCurrentChange = (val: number): void => {
+  pagination.value.currentPage = val
+}
+
+// Inicialización
+onMounted(async () => {
+  await Promise.all([loadEventLocations(), loadAvailableEvents(), loadAvailableLocations()])
+})
+</script>
+
+<style scoped>
+.event-locations-view {
+  width: 100%;
+  max-width: none;
+}
+
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0 0 4px 0;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.filters-container {
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.table-card {
+  margin-bottom: 20px;
+}
+
+.event-info,
+.location-info {
+  line-height: 1.4;
+}
+
+.event-name,
+.location-name {
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 2px;
+}
+
+.event-meta,
+.location-meta {
+  font-size: 12px;
+  color: #909399;
+}
+
+.date-info {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.date-created,
+.date-updated {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.date-updated {
+  color: #909399;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 16px 0;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+</style>
