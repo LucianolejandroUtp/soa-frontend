@@ -5,34 +5,34 @@
       <h1>Gestión de Usuarios</h1>
       <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nuevo Usuario </el-button>
     </div>
-    <!-- Filtros y búsqueda -->
+    <!-- Filtros y búsqueda (Deshabilitados - Esperando implementación en backend) -->
     <el-card class="filter-card">
       <el-row :gutter="16" align="middle">
         <el-col :span="6">
           <el-input
             v-model="searchQuery"
-            placeholder="Buscar por nombre o email..."
+            placeholder="Buscar por nombre o email... (Próximamente)"
             :prefix-icon="Search"
             clearable
-            @input="applyFilters"
+            disabled
           />
         </el-col>
         <el-col :span="6">
-          <el-select v-model="statusFilter" placeholder="Estado" clearable @change="applyFilters">
+          <el-select v-model="statusFilter" placeholder="Estado (Próximamente)" clearable disabled>
             <el-option label="Activos" :value="true" />
             <el-option label="Inactivos" :value="false" />
           </el-select>
         </el-col>
         <el-col :span="6">
-          <el-select v-model="roleFilter" placeholder="Rol" clearable @change="applyFilters">
+          <el-select v-model="roleFilter" placeholder="Rol (Próximamente)" clearable disabled>
             <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
           </el-select>
         </el-col>
         <el-col :span="3">
-          <el-button type="primary" @click="applyFilters">Filtrar</el-button>
+          <el-button type="primary" disabled>Filtrar</el-button>
         </el-col>
         <el-col :span="3">
-          <el-button @click="resetFilters">Limpiar</el-button>
+          <el-button disabled>Limpiar</el-button>
         </el-col>
       </el-row> </el-card
     ><!-- Tabla de usuarios -->
@@ -184,6 +184,12 @@ const roles = ref<Role[]>([])
 const loading = ref(false)
 const showCreateDialog = ref(false)
 const isEditing = ref(false)
+// TODO: Descomenta cuando el backend implemente filtros
+// const searchQuery = ref('')
+// const statusFilter = ref<boolean | null>(null)
+// const roleFilter = ref<number | null>(null)
+
+// Mantener variables para la UI (aunque estén deshabilitadas)
 const searchQuery = ref('')
 const statusFilter = ref<boolean | null>(null)
 const roleFilter = ref<number | null>(null)
@@ -233,8 +239,7 @@ const userRules: FormRules = reactive({
 
 // Computed
 const filteredUsers = computed(() => {
-  // Ahora que la paginación y filtrado se hace del lado del servidor,
-  // simplemente retornamos los usuarios tal como vienen del backend
+  // Solo paginación del servidor, sin filtros hasta que el backend los implemente
   return Array.isArray(users.value) ? users.value : []
 })
 
@@ -267,9 +272,6 @@ const fetchUsers = async () => {
     const response = await UserService.getUsers({
       page: currentPage.value,
       limit: pageSize.value,
-      search: searchQuery.value || undefined,
-      roleId: roleFilter.value || undefined,
-      isActive: statusFilter.value !== null ? statusFilter.value : undefined,
     }) // Los usuarios están en response.response.users según la estructura real del backend
     if (
       response &&
@@ -402,17 +404,20 @@ const resetForm = () => {
 }
 
 const applyFilters = () => {
-  currentPage.value = 1 // Reiniciar a la primera página cuando se aplican filtros
-  fetchUsers()
-}
-
-const resetFilters = () => {
-  searchQuery.value = ''
-  statusFilter.value = null
-  roleFilter.value = null
+  // TODO: Implementar cuando el backend soporte filtros (search, roleId, isActive)
+  // Por ahora, simplemente recargamos la primera página
   currentPage.value = 1
   fetchUsers()
 }
+
+// TODO: Descomenta cuando el backend implemente filtros
+// const resetFilters = () => {
+//   searchQuery.value = ''
+//   statusFilter.value = null
+//   roleFilter.value = null
+//   currentPage.value = 1
+//   fetchUsers()
+// }
 
 const openCreateDialog = () => {
   resetForm()
