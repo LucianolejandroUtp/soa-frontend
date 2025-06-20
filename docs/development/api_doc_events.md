@@ -26,29 +26,11 @@ Esta API gestiona eventos, ubicaciones y la relación entre eventos y ubicacione
 - **GET** `/api/events`
 - **Descripción:** Obtiene todos los eventos (incluidos inactivos)
 - **Respuesta:** `200 OK`
-```json
-[
-  {
-    "id": 1,
-    "name": "Concierto de Rock",
-    "description": "Un evento musical con bandas en vivo",
-    "startDate": "2025-07-01T18:00:00.000Z",
-    "endDate": "2025-07-01T21:00:00.000Z",
-    "saleStart": "2025-06-01T00:00:00.000Z",
-    "saleEnd": "2025-06-30T23:59:59.000Z",
-    "createdAt": "2025-06-18T10:00:00.000Z",
-    "updatedAt": "2025-06-18T10:00:00.000Z",
-    "isActive": true,
-    "deleted": false,
-    "eventLocations": []
-  }
-]
-```
 
 #### 1.2 Obtener eventos activos
 - **GET** `/api/events/active`
 - **Descripción:** Obtiene solo los eventos activos (isActive = true)
-- **Respuesta:** `200 OK` - Mismo formato que el anterior, pero filtrado
+- **Respuesta:** `200 OK`
 
 #### 1.3 Obtener eventos paginados
 - **GET** `/api/events/paginated?page={page}&items={items}`
@@ -57,33 +39,6 @@ Esta API gestiona eventos, ubicaciones y la relación entre eventos y ubicacione
   - `items` (number): Elementos por página
 - **Ejemplo:** `/api/events/paginated?page=0&items=10`
 - **Respuesta:** `200 OK`
-```json
-{
-  "response": [
-    {
-      "id": 1,
-      "name": "Concierto de Rock",
-      "description": "Un evento musical con bandas en vivo",
-      "startDate": "2025-07-01T18:00:00.000Z",
-      "endDate": "2025-07-01T21:00:00.000Z",
-      "saleStart": "2025-06-01T00:00:00.000Z",
-      "saleEnd": "2025-06-30T23:59:59.000Z",
-      "createdAt": "2025-06-18T10:00:00.000Z",
-      "updatedAt": "2025-06-18T10:00:00.000Z",
-      "isActive": true,
-      "deleted": false
-    }
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "itemsPerPage": 10,
-    "totalItems": 25,
-    "totalPages": 3,
-    "hasNextPage": true,
-    "hasPreviousPage": false
-  }
-}
-```
 
 #### 1.4 Obtener evento por ID
 - **GET** `/api/events/{id}`
@@ -151,33 +106,18 @@ Esta API gestiona eventos, ubicaciones y la relación entre eventos y ubicacione
 - **Parámetros de ruta:**
   - `id` (number): ID del evento
 - **Respuesta:** `200 OK` o `404 Not Found`
-```json
-{
-  "message": "Event deleted"
-}
-```
 
 #### 1.11 Activar evento
 - **PATCH** `/api/events/{id}/activate`
 - **Parámetros de ruta:**
   - `id` (number): ID del evento
 - **Respuesta:** `200 OK` o `400 Bad Request`
-```json
-{
-  "message": "Event activated"
-}
-```
 
 #### 1.12 Desactivar evento
 - **PATCH** `/api/events/{id}/deactivate`
 - **Parámetros de ruta:**
   - `id` (number): ID del evento
 - **Respuesta:** `200 OK` o `400 Bad Request`
-```json
-{
-  "message": "Event deactivated"
-}
-```
 
 ---
 
@@ -186,31 +126,17 @@ Esta API gestiona eventos, ubicaciones y la relación entre eventos y ubicacione
 #### 2.1 Obtener todas las ubicaciones
 - **GET** `/api/locations`
 - **Respuesta:** `200 OK`
-```json
-[
-  {
-    "id": 1,
-    "name": "Estadio Nacional",
-    "capacity": 50000,
-    "createdAt": "2025-06-18T10:00:00.000Z",
-    "updatedAt": "2025-06-18T10:00:00.000Z",
-    "isActive": true,
-    "deleted": false,
-    "eventLocations": []
-  }
-]
-```
 
 #### 2.2 Obtener ubicaciones activas
 - **GET** `/api/locations/active`
-- **Respuesta:** `200 OK` - Mismo formato, filtrado por activas
+- **Respuesta:** `200 OK`
 
 #### 2.3 Obtener ubicaciones paginadas
 - **GET** `/api/locations/paginated?page={page}&items={items}`
 - **Parámetros de consulta:**
   - `page` (number): Número de página (basado en 0)
   - `items` (number): Elementos por página
-- **Respuesta:** `200 OK` - Formato paginado similar al de eventos
+- **Respuesta:** `200 OK`
 
 #### 2.4 Obtener ubicación por ID
 - **GET** `/api/locations/{id}`
@@ -272,31 +198,15 @@ Esta entidad representa la relación entre eventos y ubicaciones con precios esp
 #### 3.1 Obtener todas las relaciones evento-ubicación
 - **GET** `/api/event-locations`
 - **Respuesta:** `200 OK`
-```json
-[
-  {
-    "id": 1,
-    "name": "Zona VIP",
-    "price": 150.00,
-    "createdAt": "2025-06-18T10:00:00.000Z",
-    "updatedAt": "2025-06-18T10:00:00.000Z",
-    "isActive": true,
-    "deleted": false,
-    "event": {
-      "id": 1,
-      "name": "Concierto de Rock"
-    },
-    "location": {
-      "id": 2,
-      "name": "Estadio Nacional"
-    }
-  }
-]
-```
+- **Nota:** Este endpoint no incluye las relaciones `event` y `location`. Para obtener los datos completos con relaciones, usar el endpoint paginado.
 
 #### 3.2 Obtener relaciones evento-ubicación paginadas
 - **GET** `/api/event-locations/paginated?page={page}&items={items}`
-- **Respuesta:** `200 OK` - Formato paginado
+- **Parámetros de consulta:**
+  - `page` (number): Número de página (basado en 0)
+  - `items` (number): Elementos por página
+- **Respuesta:** `200 OK`
+- **Nota:** Este endpoint SÍ incluye las relaciones completas `event` y `location`.
 
 #### 3.3 Obtener relaciones por evento
 - **GET** `/api/event-locations/event/{eventId}`
@@ -376,12 +286,6 @@ Funcionalidades de comunicación en tiempo real usando Socket.IO.
 - **Descripción:** Envía una señal de refresco de stock a todos los clientes conectados
 - **Body:** No requiere
 - **Respuesta:** `200 OK`
-```json
-{
-  "status": true,
-  "message": "refrescando stock"
-}
-```
 
 #### 4.2 Enviar mensaje a usuario específico
 - **POST** `/api/send-message`
@@ -393,12 +297,6 @@ Funcionalidades de comunicación en tiempo real usando Socket.IO.
 }
 ```
 - **Respuesta:** `200 OK` o `400 Bad Request`
-```json
-{
-  "success": true,
-  "message": "Mensaje enviado"
-}
-```
 
 #### 4.3 Enviar mensaje a sala específica
 - **POST** `/api/send-room`
@@ -429,73 +327,6 @@ Funcionalidades de comunicación en tiempo real usando Socket.IO.
 }
 ```
 - **Respuesta:** `200 OK` o `400 Bad Request`
-```json
-{
-  "status": true,
-  "message": "Mensaje enviado"
-}
-```
-
----
-
-## Estructura de Datos
-
-### Evento
-```typescript
-{
-  id: number;
-  name: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  saleStart: Date;
-  saleEnd: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  deleted: boolean;
-  eventLocations?: EventLocation[];
-}
-```
-
-### Ubicación
-```typescript
-{
-  id: number;
-  name: string;
-  capacity: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  deleted: boolean;
-  eventLocations?: EventLocation[];
-}
-```
-
-### Evento-Ubicación
-```typescript
-{
-  id: number;
-  name: string;
-  price: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  deleted: boolean;
-  event: Event;
-  location: Location;
-}
-```
-
-### Mensaje WebSocket
-```typescript
-{
-  content: string;
-  timestamp: Date;
-  title: string;
-  saleId: number;
-}
-```
 
 ---
 
@@ -597,6 +428,7 @@ const getPaginatedEvents = async (page = 0, items = 10) => {
 5. **WebSockets:** Las conexiones WebSocket se mantienen activas para comunicación en tiempo real
 6. **Validación:** Todos los endpoints validan los datos de entrada usando class-validator
 7. **CORS:** La API permite conexiones desde cualquier origen para WebSockets
+8. **Verificación:** Las respuestas JSON específicas deben verificarse manualmente con Postman para cada implementación
 
 ---
 
