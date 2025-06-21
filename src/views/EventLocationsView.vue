@@ -1,47 +1,42 @@
 <template>
   <div class="event-locations-view">
-    <!-- Header con filtros -->
-    <el-card class="filter-card" shadow="never">
-      <div class="page-header">
-        <div>
-          <h2>Gestión de Relaciones Evento-Ubicación</h2>
-          <p class="page-subtitle">Administra las zonas y precios de los eventos</p>
-        </div>
-        <el-button type="primary" @click="openCreateDialog">
-          <el-icon><Plus /></el-icon>
-          Nueva Relación
-        </el-button>
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Gestión de Relaciones Evento-Ubicación</h1>
+        <p class="page-subtitle">Administra las zonas y precios de los eventos</p>
       </div>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nueva Relación </el-button>
+    </div>
 
-      <!-- Filtros -->
-      <div class="filters-container">
-        <el-row :gutter="16">
-          <el-col :span="6">
-            <el-input
-              v-model="filters.search"
-              placeholder="Buscar por nombre de zona..."
-              :prefix-icon="Search"
-              clearable
-            />
-          </el-col>
-          <el-col :span="4">
-            <el-select v-model="filters.status" placeholder="Estado" clearable>
-              <el-option label="Todos" value="" />
-              <el-option label="Activos" value="active" />
-              <el-option label="Inactivos" value="inactive" />
-            </el-select>
-          </el-col>
-          <el-col :span="4">
-            <el-button @click="clearFilters">
-              <el-icon><Delete /></el-icon>
-              Limpiar
-            </el-button>
-          </el-col>
-        </el-row>
-      </div>
+    <!-- Filtros -->
+    <el-card class="filter-card">
+      <el-row :gutter="16" align="middle">
+        <el-col :span="6">
+          <el-input
+            v-model="filters.search"
+            placeholder="Buscar por nombre de zona..."
+            :prefix-icon="Search"
+            clearable
+          />
+        </el-col>
+        <el-col :span="4">
+          <el-select v-model="filters.status" placeholder="Estado" clearable>
+            <el-option label="Todos" value="" />
+            <el-option label="Activos" value="active" />
+            <el-option label="Inactivos" value="inactive" />
+          </el-select>
+        </el-col>
+        <el-col :span="4">
+          <el-button @click="clearFilters">
+            <el-icon><Delete /></el-icon>
+            Limpiar
+          </el-button>
+        </el-col>
+      </el-row>
     </el-card>
     <!-- Tabla principal -->
-    <el-card class="table-card">
+    <el-card>
       <el-table
         v-loading="loading"
         :data="filteredEventLocations"
@@ -453,10 +448,8 @@ onMounted(async () => {
 .event-locations-view {
   width: 100%;
   max-width: none;
-}
-
-.filter-card {
-  margin-bottom: 20px;
+  margin: 0;
+  padding: 0;
 }
 
 .page-header {
@@ -466,7 +459,7 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 
-.page-header h2 {
+.page-header h1 {
   margin: 0 0 4px 0;
   color: #303133;
   font-size: 24px;
@@ -479,13 +472,7 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.filters-container {
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-}
-
-.table-card {
+.filter-card {
   margin-bottom: 20px;
 }
 
@@ -525,16 +512,11 @@ onMounted(async () => {
   color: #909399;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 4px;
-}
-
 .pagination-container {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: 20px;
-  padding: 16px 0;
+  padding: 20px 0;
 }
 
 .dialog-footer {
