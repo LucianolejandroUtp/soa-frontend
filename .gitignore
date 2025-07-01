@@ -32,6 +32,9 @@ docs-backend/
 
 docs_element-plus-2.10.2/
 
+docs/guides/refactor/
+docs/development/ENDPOINTS.md
+
 # Configuración de GitHub (workflows, templates, etc.)
 .github/
 
