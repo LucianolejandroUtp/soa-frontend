@@ -1,5 +1,5 @@
 // Servicio para gestión de roles - Conectado al backend SOA-USERS
-import { apiClientUsers } from './api'
+import { apiClient } from './api'
 import type { Role, CreateRoleDto, UpdateRoleDto } from '@/types/api'
 
 export class RoleService {
@@ -34,7 +34,7 @@ export class RoleService {
     console.log('🔍 [roleService] Haciendo petición GET a:', this.BASE_PATH)
     console.log('🔍 [roleService] Parámetros enviados:', queryParams)
 
-    const response = await apiClientUsers.get(this.BASE_PATH, { params: queryParams })
+    const response = await apiClient.get(this.BASE_PATH, { params: queryParams })
 
     console.log('📥 [roleService] Respuesta completa del backend:', response)
     console.log('📥 [roleService] Status de respuesta:', response.status)
@@ -63,7 +63,7 @@ export class RoleService {
    * Obtener rol por ID
    */
   static async getRoleById(id: number): Promise<Role> {
-    const response = await apiClientUsers.get(`${this.BASE_PATH}/${id}`)
+    const response = await apiClient.get(`${this.BASE_PATH}/${id}`)
 
     console.log(`📥 Respuesta getRoleById(${id}):`, response.data)
 
@@ -76,7 +76,7 @@ export class RoleService {
   static async createRole(roleData: CreateRoleDto): Promise<Role> {
     console.log('📤 Creando rol:', roleData)
 
-    const response = await apiClientUsers.post(this.BASE_PATH, roleData)
+    const response = await apiClient.post(this.BASE_PATH, roleData)
 
     console.log('📥 Rol creado:', response.data)
 
@@ -89,7 +89,7 @@ export class RoleService {
   static async updateRole(id: number, roleData: UpdateRoleDto): Promise<Role> {
     console.log(`📤 Actualizando rol ${id}:`, roleData)
 
-    const response = await apiClientUsers.put(`${this.BASE_PATH}/${id}`, roleData)
+    const response = await apiClient.put(`${this.BASE_PATH}/${id}`, roleData)
 
     console.log('📥 Rol actualizado:', response.data)
 
@@ -102,7 +102,7 @@ export class RoleService {
   static async deleteRole(id: number): Promise<void> {
     console.log(`🗑️ Eliminando rol ${id}`)
 
-    await apiClientUsers.delete(`${this.BASE_PATH}/${id}`)
+    await apiClient.delete(`${this.BASE_PATH}/${id}`)
 
     console.log(`✅ Rol ${id} eliminado`)
   }
@@ -113,7 +113,7 @@ export class RoleService {
   static async deactivateRole(id: number): Promise<void> {
     console.log(`🔒 Desactivando rol ${id}`)
 
-    await apiClientUsers.post(`${this.BASE_PATH}/${id}/deactivate`)
+    await apiClient.post(`${this.BASE_PATH}/${id}/deactivate`)
 
     console.log(`✅ Rol ${id} desactivado`)
   }
@@ -124,7 +124,7 @@ export class RoleService {
   static async activateRole(id: number): Promise<void> {
     console.log(`🔓 Activando rol ${id}`)
 
-    await apiClientUsers.post(`${this.BASE_PATH}/${id}/activate`)
+    await apiClient.post(`${this.BASE_PATH}/${id}/activate`)
 
     console.log(`✅ Rol ${id} activado`)
   }

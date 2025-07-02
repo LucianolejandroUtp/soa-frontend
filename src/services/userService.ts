@@ -1,5 +1,5 @@
 // Servicio para gestión de usuarios - Conectado al backend SOA-USERS
-import { apiClientUsers } from './api'
+import { apiClient } from './api'
 import type {
   User,
   CreateUserDto,
@@ -40,7 +40,7 @@ export class UserService {
       queryParams.isActive = isActive
     }
     try {
-      const response = await apiClientUsers.get(this.BASE_PATH, {
+      const response = await apiClient.get(this.BASE_PATH, {
         params: queryParams,
       })
 
@@ -61,7 +61,7 @@ export class UserService {
    * Obtener usuario por ID
    */
   static async getUserById(id: number): Promise<User> {
-    const response = await apiClientUsers.get(`${this.BASE_PATH}/${id}`)
+    const response = await apiClient.get(`${this.BASE_PATH}/${id}`)
     return response.data
   }
   /**
@@ -69,7 +69,7 @@ export class UserService {
    */
   static async createUser(userData: CreateUserDto): Promise<User> {
     console.log('📤 Enviando datos de usuario para creación:', userData)
-    const response = await apiClientUsers.post(this.BASE_PATH, userData)
+    const response = await apiClient.post(this.BASE_PATH, userData)
     console.log('📥 Respuesta del backend:', response.data)
     return response.data
   }
@@ -79,7 +79,7 @@ export class UserService {
    */
   static async updateUser(userData: UpdateUserDto): Promise<User> {
     console.log('📤 Enviando datos de usuario para actualización:', userData)
-    const response = await apiClientUsers.put(this.BASE_PATH, userData)
+    const response = await apiClient.put(this.BASE_PATH, userData)
     return response.data
   }
 
@@ -87,7 +87,7 @@ export class UserService {
    * Eliminar usuario (borrado lógico)
    */
   static async deleteUser(id: number): Promise<void> {
-    await apiClientUsers.delete(`${this.BASE_PATH}/${id}`)
+    await apiClient.delete(`${this.BASE_PATH}/${id}`)
   }
   /**
    * Buscar usuarios por término

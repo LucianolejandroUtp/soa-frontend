@@ -1,4 +1,4 @@
-import { apiClientEvents } from './api'
+import { apiClient } from './api'
 import type {
   EventLocation,
   EventLocationBasic,
@@ -13,7 +13,7 @@ export class EventLocationService {
    * Obtener todas las relaciones evento-ubicación
    */
   static async getAllEventLocations(): Promise<EventLocationBasic[]> {
-    const response = await apiClientEvents.get<EventLocationBasic[]>('/event-locations')
+    const response = await apiClient.get<EventLocationBasic[]>('/event-locations')
     return response.data
   }
 
@@ -21,7 +21,7 @@ export class EventLocationService {
    * Obtener relaciones evento-ubicación activas
    */
   static async getActiveEventLocations(): Promise<EventLocation[]> {
-    const response = await apiClientEvents.get<EventLocation[]>('/event-locations/active')
+    const response = await apiClient.get<EventLocation[]>('/event-locations/active')
     return response.data
   }
 
@@ -33,22 +33,30 @@ export class EventLocationService {
   ): Promise<EventPaginatedResponse<EventLocation>> {
     const queryParams = new URLSearchParams()
 
-    // La API de eventos usa page basado en 0, pero mostramos basado en 1 en la UI
+    // SOA-BUS usa page basado en 1
     if (params.page !== undefined) {
-      queryParams.append('page', (params.page - 1).toString())
+      queryParams.append('page', params.page.toString())
     }
 
     if (params.items !== undefined) {
       queryParams.append('items', params.items.toString())
     }
 
-    const response = await apiClientEvents.get<EventPaginatedResponse<EventLocation>>(
+    console.log('🔍 [EventLocationService] Solicitando relaciones paginadas:', {
+      page: params.page,
+      items: params.items
+    })
+
+    const response = await apiClient.get<EventPaginatedResponse<EventLocation>>(
       `/event-locations/paginated?${queryParams.toString()}`,
     )
 
-    // Ajustar el currentPage para que sea basado en 1 para la UI
+    console.log('📥 [EventLocationService] Respuesta recibida:', response.data)
+
+    // Ajustar el currentPage si es necesario para la UI
     if (response.data.pagination) {
-      response.data.pagination.currentPage = response.data.pagination.currentPage + 1
+      // Si el backend devuelve basado en 0, ajustar para UI basada en 1
+      // response.data.pagination.currentPage = response.data.pagination.currentPage + 1
     }
 
     return response.data
@@ -58,7 +66,7 @@ export class EventLocationService {
    * Obtener relación evento-ubicación por ID
    */
   static async getEventLocationById(id: number): Promise<EventLocation> {
-    const response = await apiClientEvents.get<EventLocation>(`/event-locations/${id}`)
+    const response = await apiClient.get<EventLocation>(`/event-locations/${id}`)
     return response.data
   }
 
@@ -66,7 +74,7 @@ export class EventLocationService {
    * Obtener relaciones por evento
    */
   static async getEventLocationsByEvent(eventId: number): Promise<EventLocation[]> {
-    const response = await apiClientEvents.get<EventLocation[]>(`/event-locations/event/${eventId}`)
+    const response = await apiClient.get<EventLocation[]>(`/event-locations/event/${eventId}`)
     return response.data
   }
 
@@ -74,7 +82,7 @@ export class EventLocationService {
    * Obtener relaciones por ubicación
    */
   static async getEventLocationsByLocation(locationId: number): Promise<EventLocation[]> {
-    const response = await apiClientEvents.get<EventLocation[]>(
+    const response = await apiClient.get<EventLocation[]>(
       `/event-locations/location/${locationId}`,
     )
     return response.data
@@ -86,7 +94,7 @@ export class EventLocationService {
   static async createEventLocation(
     eventLocationData: CreateEventLocationDto,
   ): Promise<EventLocation> {
-    const response = await apiClientEvents.post<EventLocation>(
+    const response = await apiClient.post<EventLocation>(
       '/event-locations',
       eventLocationData,
     )
@@ -99,7 +107,7 @@ export class EventLocationService {
   static async updateEventLocation(
     eventLocationData: UpdateEventLocationDto,
   ): Promise<EventLocation> {
-    const response = await apiClientEvents.put<EventLocation>(
+    const response = await apiClient.put<EventLocation>(
       `/event-locations/${eventLocationData.id}`,
       eventLocationData,
     )
@@ -110,7 +118,7 @@ export class EventLocationService {
    * Eliminar relación evento-ubicación
    */
   static async deleteEventLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClientEvents.delete<{ message: string }>(`/event-locations/${id}`)
+    const response = await apiClient.delete<{ message: string }>(`/event-locations/${id}`)
     return response.data
   }
 
@@ -118,7 +126,7 @@ export class EventLocationService {
    * Activar relación evento-ubicación
    */
   static async activateEventLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClientEvents.patch<{ message: string }>(
+    const response = await apiClient.patch<{ message: string }>(
       `/event-locations/${id}/activate`,
     )
     return response.data
@@ -128,7 +136,7 @@ export class EventLocationService {
    * Desactivar relación evento-ubicación
    */
   static async deactivateEventLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClientEvents.patch<{ message: string }>(
+    const response = await apiClient.patch<{ message: string }>(
       `/event-locations/${id}/deactivate`,
     )
     return response.data

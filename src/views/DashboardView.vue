@@ -2,17 +2,30 @@
   <div class="dashboard">
     <!-- Estado de las APIs -->
     <el-alert
-      v-if="!apiHealth.overall"
-      title="Algunas APIs no están disponibles"
-      type="warning"
+      v-if="apiHealth.events || apiHealth.users || apiHealth.locations || apiHealth.eventLocations || apiHealth.roles"
+      :title="apiHealth.overall ? 'Estado de Servicios' : 'Algunos servicios no están disponibles'"
+      :type="apiHealth.overall ? 'success' : 'warning'"
       :description="getApiHealthMessage()"
       style="margin-bottom: 20px"
       show-icon
     />
 
     <!-- Tarjetas de estadísticas -->
-    <el-row :gutter="20" class="stats-cards" v-loading="loadingStats">
-      <el-col v-for="stat in quickStats" :key="stat.label" :span="6">
+    <div v-if="quickStats.length === 0 && !loadingStats" class="no-stats">
+      <el-empty description="No hay estadísticas disponibles">
+        <template #description>
+          <p>No hay servicios disponibles para mostrar estadísticas.</p>
+          <p>Verifica que SOA-BUS y los microservicios estén ejecutándose.</p>
+        </template>
+        <el-button type="primary" @click="refreshMetrics">
+          <el-icon><Refresh /></el-icon>
+          Reintentar
+        </el-button>
+      </el-empty>
+    </div>
+    
+    <el-row v-else :gutter="20" class="stats-cards" v-loading="loadingStats">
+      <el-col v-for="stat in quickStats" :key="stat.label" :span="quickStats.length <= 4 ? 6 : 4">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-number">{{ stat.value }}</div>
@@ -275,6 +288,8 @@ const apiHealth = ref({
   events: false,
   locations: false,
   users: false,
+  eventLocations: false,
+  roles: false,
   overall: false,
 })
 
@@ -341,12 +356,34 @@ const getTrendColor = (type: 'up' | 'down' | 'neutral'): string => {
 }
 
 const getApiHealthMessage = (): string => {
-  const issues = []
-  if (!apiHealth.value.events) issues.push('API de Eventos')
-  if (!apiHealth.value.locations) issues.push('API de Ubicaciones')
-  if (!apiHealth.value.users) issues.push('API de Usuarios')
+  const availableServices = []
+  const unavailableServices = []
+  
+  if (apiHealth.value.events) availableServices.push('Eventos')
+  else unavailableServices.push('Eventos')
+  
+  if (apiHealth.value.users) availableServices.push('Usuarios')
+  else unavailableServices.push('Usuarios')
+  
+  if (apiHealth.value.locations) availableServices.push('Ubicaciones')
+  else unavailableServices.push('Ubicaciones')
+  
+  if (apiHealth.value.eventLocations) availableServices.push('Relaciones Evento-Ubicación')
+  else unavailableServices.push('Relaciones Evento-Ubicación')
+  
+  if (apiHealth.value.roles) availableServices.push('Roles')
+  else unavailableServices.push('Roles')
 
-  return `Las siguientes APIs no están disponibles: ${issues.join(', ')}. Algunas funcionalidades pueden estar limitadas.`
+  if (availableServices.length === 0) {
+    return 'No hay servicios disponibles. Verifica la conexión con SOA-BUS.'
+  }
+
+  const message = `Servicios disponibles: ${availableServices.join(', ')}.`
+  if (unavailableServices.length > 0) {
+    return `${message} No disponibles: ${unavailableServices.join(', ')}.`
+  }
+  
+  return message
 }
 
 const goToEventLocations = (): void => {
@@ -365,6 +402,11 @@ onMounted(async () => {
   max-width: none;
   margin: 0;
   padding: 0;
+}
+
+.no-stats {
+  margin: 40px 0;
+  text-align: center;
 }
 
 .stats-cards {

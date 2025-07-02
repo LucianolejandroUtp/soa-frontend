@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { AuthService } from '@/services/authService'
 import AdminLayout from '../layouts/AdminLayout.vue'
 
 const router = createRouter({
@@ -72,6 +73,52 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+// Guards de navegación
+router.beforeEach(async (to, from, next) => {
+  const token = AuthService.getToken()
+  const isAuthenticated = AuthService.isAuthenticated()
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+
+  console.log('🛡️ Route guard:', {
+    to: to.path,
+    from: from.path,
+    token: token ? 'presente' : 'ausente',
+    isAuthenticated,
+    requiresAuth,
+    requiresGuest
+  })
+
+  // Evitar bucles de redirección infinitos
+  if (from.path === '/login' && to.path === '/login') {
+    console.log('⚠️ Evitando bucle infinito en login')
+    next()
+    return
+  }
+
+  if (requiresAuth && !isAuthenticated) {
+    // Ruta protegida sin autenticación -> ir a login
+    if (to.path !== '/login') {
+      console.log('🚫 Acceso denegado - redirigiendo a login')
+      next('/login')
+    } else {
+      next()
+    }
+  } else if (requiresGuest && isAuthenticated) {
+    // Ruta de invitado estando autenticado -> ir a dashboard
+    if (to.path === '/login' || to.path === '/register' || to.path === '/forgot-password') {
+      console.log('✅ Ya autenticado - redirigiendo a dashboard')
+      next('/')
+    } else {
+      next()
+    }
+  } else {
+    // Permitir navegación
+    console.log('✅ Navegación permitida')
+    next()
+  }
 })
 
 export default router

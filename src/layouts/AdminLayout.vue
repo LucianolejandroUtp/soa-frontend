@@ -97,15 +97,27 @@
 
         <div class="header-right">
           <el-dropdown>
-            <el-avatar
-              :size="40"
-              src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-            />
+            <div class="user-info">
+              <span class="user-name">{{ currentUser?.name || currentUser?.email || 'Usuario' }}</span>
+              <el-avatar
+                :size="40"
+                src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
+              />
+            </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>Mi Perfil</el-dropdown-item>
-                <el-dropdown-item>Configuración</el-dropdown-item>
-                <el-dropdown-item divided>Cerrar Sesión</el-dropdown-item>
+                <el-dropdown-item @click="handleProfile">
+                  <el-icon><User /></el-icon>
+                  Mi Perfil
+                </el-dropdown-item>
+                <el-dropdown-item @click="handleSettings">
+                  <el-icon><Setting /></el-icon>
+                  Configuración
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
+                  <el-icon><SwitchButton /></el-icon>
+                  Cerrar Sesión
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -121,7 +133,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { AuthService } from '@/services/authService'
 import {
   House,
   User,
@@ -132,10 +146,17 @@ import {
   Calendar,
   Location,
   Connection,
+  SwitchButton,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
+const router = useRouter()
 const isCollapse = ref(false)
+
+// Obtener información del usuario autenticado
+const currentUser = computed(() => {
+  return AuthService.getUser()
+})
 
 const activeMenu = computed(() => route.path)
 
@@ -165,6 +186,48 @@ const handleSubMenuOpen = (index: string) => {
 
 const handleSubMenuClose = (index: string) => {
   console.log('Submenú cerrado:', index)
+}
+
+// Handlers para el dropdown del usuario
+const handleProfile = () => {
+  console.log('👤 Navegando a perfil...')
+  ElMessage.info('Funcionalidad de perfil próximamente')
+  // router.push('/profile') // Cuando se implemente la vista de perfil
+}
+
+const handleSettings = () => {
+  console.log('⚙️ Navegando a configuración...')
+  router.push('/settings')
+}
+
+const handleLogout = async () => {
+  try {
+    const result = await ElMessageBox.confirm(
+      '¿Estás seguro de que quieres cerrar sesión?',
+      'Confirmar Logout',
+      {
+        confirmButtonText: 'Sí, cerrar sesión',
+        cancelButtonText: 'Cancelar',
+        type: 'warning',
+        center: true
+      }
+    )
+
+    if (result === 'confirm') {
+      console.log('🚪 Cerrando sesión...')
+      
+      // Usar AuthService para cerrar sesión
+      AuthService.logout()
+      
+      ElMessage.success('Sesión cerrada correctamente')
+      
+      // Redirigir al login
+      router.push('/login')
+    }
+  } catch (error) {
+    // Usuario canceló o cerró el diálogo
+    console.log('❌ Logout cancelado')
+  }
 }
 </script>
 
@@ -239,5 +302,47 @@ const handleSubMenuClose = (index: string) => {
   flex: 1;
   overflow-y: auto;
   width: 100%;
+}
+
+/* Estilos para el dropdown del usuario */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.user-info:hover {
+  background-color: #f5f5f5;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+:deep(.el-dropdown-menu__item:hover) {
+  background-color: #f5f5f5;
+}
+
+:deep(.el-dropdown-menu__item.is-divided) {
+  border-top: 1px solid #e4e7ed;
+  margin-top: 6px;
+  padding-top: 12px;
 }
 </style>

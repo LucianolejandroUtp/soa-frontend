@@ -75,7 +75,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
-import { UserService } from '@/services/userService'
+import { AuthService } from '@/services/authService'
 
 const router = useRouter()
 const loginFormRef = ref<FormInstance>()
@@ -110,26 +110,30 @@ const handleLogin = async () => {
 
     loading.value = true
 
-    // Usar el servicio real de usuarios para autenticar
-    console.log('🚀 Iniciando autenticación...')
-    const result = await UserService.login({
+    // Usar AuthService para autenticación con SOA-BUS
+    console.log('🚀 Iniciando autenticación con SOA-BUS...')
+    const result = await AuthService.login({
       email: loginForm.email,
       password: loginForm.password,
     })
 
-    if (result.success) {
-      ElMessage.success(`¡Bienvenido/a de vuelta, ${result.user.name}!`)
+    if (result.token && result.user) {
+      ElMessage.success(`¡Bienvenido/a de vuelta, ${result.user.name || result.user.email}!`)
 
-      // Almacenar información del usuario localmente
-      localStorage.setItem('user', JSON.stringify(result.user))
-      localStorage.setItem('isLoggedIn', 'true')
+      console.log('✅ Login exitoso con JWT, redirigiendo al dashboard...')
 
-      console.log('✅ Login exitoso, redirigiendo al dashboard...')
+      // Asegurar que localStorage se actualice completamente
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Verificar que el token se guardó correctamente
+      const savedToken = AuthService.getToken()
+      console.log('🔍 Token guardado verificación:', { 
+        hasToken: !!savedToken, 
+        tokenLength: savedToken?.length || 0 
+      })
 
-      // Redirigir al dashboard
-      setTimeout(() => {
-        router.push('/')
-      }, 1000)
+      // Redirigir específicamente al dashboard
+      await router.replace({ name: 'dashboard' })
     }
   } catch (error: unknown) {
     console.error('❌ Error en login:', error)
@@ -137,10 +141,12 @@ const handleLogin = async () => {
     let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.'
 
     if (error instanceof Error) {
-      if (error.message.includes('Usuario no encontrado')) {
-        errorMessage = 'No existe una cuenta con este correo electrónico.'
-      } else if (error.message.includes('Network')) {
-        errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
+      if (error.message.includes('Credenciales inválidas')) {
+        errorMessage = 'Email o contraseña incorrectos.'
+      } else if (error.message.includes('Email y contraseña son requeridos')) {
+        errorMessage = 'Por favor completa todos los campos.'
+      } else if (error.message.includes('Error de conexión')) {
+        errorMessage = 'Error de conexión con el servidor. Intenta de nuevo.'
       }
     }
 

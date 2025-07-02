@@ -1,14 +1,8 @@
 // Configuración base para Axios
 import axios, { type AxiosInstance } from 'axios'
 
-// URLs de las APIs - En desarrollo usar proxy, en producción URLs completas
-const API_USERS_URL = import.meta.env.PROD
-  ? import.meta.env.VITE_API_USERS_URL || 'http://localhost:2221/api'
-  : '/api' // Para usuarios y roles - proxy maneja la redirección
-
-const API_EVENTS_URL = import.meta.env.PROD
-  ? import.meta.env.VITE_API_EVENTS_URL || 'http://localhost:2222/api'
-  : '/api' // Para eventos - proxy maneja la redirección específica
+// URL base única para el SOA-BUS (API Gateway)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:2222/api'
 
 /**
  * Crea y configura una instancia de Axios.
@@ -24,14 +18,14 @@ const createApiClient = (baseURL: string): AxiosInstance => {
     timeout: 10000,
   })
 
-  // Interceptor para requests (agregar auth token si existe)
+  // Interceptor para requests (agregar auth token automáticamente)
   client.interceptors.request.use(
     (config) => {
-      // Aquí puedes agregar el token de autenticación cuando lo implementes
-      // const token = localStorage.getItem('auth_token')
-      // if (token) {
-      //   config.headers.Authorization = `Bearer ${token}`
-      // }
+      // Importar AuthService dinámicamente para evitar dependencias circulares
+      const token = localStorage.getItem('soa_auth_token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
       return config
     },
     (error) => {
@@ -46,10 +40,19 @@ const createApiClient = (baseURL: string): AxiosInstance => {
     },
     (error) => {
       if (error.response?.status === 401) {
-        // Redirigir a login o limpiar auth
-        console.error('Usuario no autorizado')
+        // Token expirado o inválido - limpiar autenticación
+        console.error('🔒 Usuario no autorizado - limpiando sesión')
+        localStorage.removeItem('soa_auth_token')
+        localStorage.removeItem('soa_auth_user')
+        
+        // Redirigir a login si no estamos ya ahí
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+      } else if (error.response?.status === 403) {
+        console.error('🚫 Acceso denegado - permisos insuficientes')
       } else if (error.response?.status === 500) {
-        console.error('Error del servidor')
+        console.error('🔥 Error del servidor')
       }
       return Promise.reject(error)
     },
@@ -58,8 +61,6 @@ const createApiClient = (baseURL: string): AxiosInstance => {
   return client
 }
 
-// Instancia de Axios para la API de Usuarios
-export const apiClientUsers = createApiClient(API_USERS_URL)
 
-// Instancia de Axios para la API de Eventos
-export const apiClientEvents = createApiClient(API_EVENTS_URL)
+// Instancia de Axios única para el SOA-BUS
+export const apiClient = createApiClient(API_BASE_URL)

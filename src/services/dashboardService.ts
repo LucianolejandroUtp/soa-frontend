@@ -51,7 +51,9 @@ export class DashboardService {
    */
   static async getDashboardMetrics(): Promise<DashboardMetrics> {
     try {
-      // Realizar todas las peticiones en paralelo para mejor rendimiento
+      console.log('📊 [Dashboard] Iniciando carga de métricas...')
+
+      // Realizar todas las peticiones en paralelo con manejo individual de errores
       const [
         allEvents,
         activeEvents,
@@ -60,39 +62,58 @@ export class DashboardService {
         allEventLocations,
         allUsers,
         allRoles,
-      ] = await Promise.all([
-        EventService.getAllEvents().catch(() => []),
-        EventService.getActiveEvents().catch(() => []),
-        LocationService.getAllLocations().catch(() => []),
-        LocationService.getActiveLocations().catch(() => []),
-        EventLocationService.getAllEventLocations().catch(() => []),
+      ] = await Promise.allSettled([
+        EventService.getAllEvents(),
+        EventService.getActiveEvents(),
+        LocationService.getAllLocations(),
+        LocationService.getActiveLocations(),
+        EventLocationService.getAllEventLocations(),
         UserService.getUsers({ page: 1, limit: 1000 })
-          .then((response) => response.response?.users || [])
-          .catch(() => []),
+          .then((response) => response.response?.users || []),
         RoleService.getRoles({ page: 1, limit: 1000 })
-          .then((response) => response.roles || [])
-          .catch(() => []),
-      ]) // Calcular métricas de eventos
+          .then((response) => response.roles || []),
+      ])
+
+      // Extraer datos exitosos, usar arrays vacíos para servicios fallidos
+      const eventsList = allEvents.status === 'fulfilled' ? allEvents.value : []
+      const activeEventsList = activeEvents.status === 'fulfilled' ? activeEvents.value : []
+      const locationsList = allLocations.status === 'fulfilled' ? allLocations.value : []
+      const activeLocationsList = activeLocations.status === 'fulfilled' ? activeLocations.value : []
+      const eventLocationsList = allEventLocations.status === 'fulfilled' ? allEventLocations.value : []
+      const usersList = allUsers.status === 'fulfilled' ? allUsers.value : []
+      const rolesList = allRoles.status === 'fulfilled' ? allRoles.value : []
+
+      console.log('📊 [Dashboard] Datos obtenidos:', {
+        eventos: eventsList.length,
+        eventosActivos: activeEventsList.length,
+        ubicaciones: locationsList.length,
+        ubicacionesActivas: activeLocationsList.length,
+        relaciones: eventLocationsList.length,
+        usuarios: usersList.length,
+        roles: rolesList.length
+      })      // Calcular métricas de eventos
       const now = new Date()
-      const upcomingEvents = allEvents.filter((event: Event) => {
+      const upcomingEvents = eventsList.filter((event: Event) => {
         const startDate = new Date(event.startDate)
         return startDate > now && event.isActive
       })
 
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const eventsThisMonth = allEvents.filter((event: Event) => {
+      const eventsThisMonth = eventsList.filter((event: Event) => {
         const eventDate = new Date(event.createdAt)
         return eventDate >= thisMonth
       })
 
       // Calcular métricas de ubicaciones
-      const totalCapacity = allLocations.reduce(
+      const totalCapacity = locationsList.reduce(
         (sum: number, location: Location) => sum + location.capacity,
         0,
       )
       const averageCapacity =
-        allLocations.length > 0 ? Math.round(totalCapacity / allLocations.length) : 0 // Calcular métricas de relaciones evento-ubicación
-      const activeEventLocations = allEventLocations.filter(
+        locationsList.length > 0 ? Math.round(totalCapacity / locationsList.length) : 0
+
+      // Calcular métricas de relaciones evento-ubicación
+      const activeEventLocations = eventLocationsList.filter(
         (rel: EventLocationBasic) => rel.isActive,
       )
       const totalPrices = activeEventLocations.reduce(
@@ -103,35 +124,35 @@ export class DashboardService {
         activeEventLocations.length > 0 ? Math.round(totalPrices / activeEventLocations.length) : 0
 
       // Calcular métricas de usuarios
-      const activeUsers = allUsers.filter((user: User) => user.isActive)
+      const activeUsers = usersList.filter((user: User) => user.isActive)
 
       // Datos para gráficos
-      const eventsByMonth = this.calculateEventsByMonth(allEvents)
-      const locationsByCapacity = this.getTopLocationsByCapacity(allLocations, 5)
+      const eventsByMonth = this.calculateEventsByMonth(eventsList)
+      const locationsByCapacity = this.getTopLocationsByCapacity(locationsList, 5)
       const eventLocationsByPrice = this.getTopEventLocationsByPrice(activeEventLocations, 5)
 
       return {
         // Eventos
-        totalEvents: allEvents.length,
-        activeEvents: activeEvents.length,
+        totalEvents: eventsList.length,
+        activeEvents: activeEventsList.length,
         upcomingEvents: upcomingEvents.length,
         eventsThisMonth: eventsThisMonth.length,
 
         // Ubicaciones
-        totalLocations: allLocations.length,
-        activeLocations: activeLocations.length,
+        totalLocations: locationsList.length,
+        activeLocations: activeLocationsList.length,
         totalCapacity,
         averageCapacity,
 
         // Relaciones
-        totalEventLocations: allEventLocations.length,
+        totalEventLocations: eventLocationsList.length,
         activeEventLocations: activeEventLocations.length,
         averagePrice,
 
         // Usuarios
-        totalUsers: allUsers.length,
+        totalUsers: usersList.length,
         activeUsers: activeUsers.length,
-        totalRoles: allRoles.length,
+        totalRoles: rolesList.length,
 
         // Gráficos
         eventsByMonth,
@@ -149,10 +170,14 @@ export class DashboardService {
    */
   static async getQuickStats(): Promise<QuickStats[]> {
     try {
+      console.log('📈 [Dashboard] Cargando estadísticas rápidas...')
       const metrics = await this.getDashboardMetrics()
 
-      return [
-        {
+      const stats: QuickStats[] = []
+
+      // Solo mostrar estadísticas si hay datos disponibles
+      if (metrics.totalEvents > 0 || metrics.activeEvents > 0) {
+        stats.push({
           label: 'Total Eventos',
           value: metrics.totalEvents,
           icon: 'Calendar',
@@ -161,52 +186,70 @@ export class DashboardService {
             value: metrics.eventsThisMonth,
             type: metrics.eventsThisMonth > 0 ? 'up' : 'neutral',
           },
-        },
-        {
+        })
+
+        stats.push({
           label: 'Eventos Activos',
           value: metrics.activeEvents,
           icon: 'Check',
           color: '#67C23A',
-        },
-        {
+        })
+
+        stats.push({
           label: 'Próximos Eventos',
           value: metrics.upcomingEvents,
           icon: 'Clock',
           color: '#E6A23C',
-        },
-        {
-          label: 'Total Ubicaciones',
-          value: metrics.totalLocations,
-          icon: 'Location',
-          color: '#F56C6C',
-        },
-        {
-          label: 'Capacidad Total',
-          value: metrics.totalCapacity.toLocaleString(),
-          icon: 'User',
-          color: '#909399',
-        },
-        {
-          label: 'Relaciones Activas',
-          value: metrics.activeEventLocations,
-          icon: 'Link',
-          color: '#873BF4',
-        },
-        {
-          label: 'Precio Promedio',
-          value: `$${metrics.averagePrice}`,
-          icon: 'Money',
-          color: '#F7BA2A',
-        },
-        {
+        })
+      }
+
+      if (metrics.totalUsers > 0) {
+        stats.push({
           label: 'Usuarios Activos',
           value: metrics.activeUsers,
           icon: 'UserFilled',
           color: '#409EFF',
-        },
-      ]
+        })
+      }
+
+      // Solo mostrar si el servicio de ubicaciones está disponible
+      if (metrics.totalLocations > 0) {
+        stats.push({
+          label: 'Total Ubicaciones',
+          value: metrics.totalLocations,
+          icon: 'Location',
+          color: '#F56C6C',
+        })
+
+        stats.push({
+          label: 'Capacidad Total',
+          value: metrics.totalCapacity.toLocaleString(),
+          icon: 'User',
+          color: '#909399',
+        })
+      }
+
+      // Solo mostrar si el servicio de relaciones está disponible
+      if (metrics.totalEventLocations > 0) {
+        stats.push({
+          label: 'Relaciones Activas',
+          value: metrics.activeEventLocations,
+          icon: 'Link',
+          color: '#873BF4',
+        })
+
+        stats.push({
+          label: 'Precio Promedio',
+          value: `$${metrics.averagePrice}`,
+          icon: 'Money',
+          color: '#F7BA2A',
+        })
+      }
+
+      console.log('📈 [Dashboard] Estadísticas cargadas:', stats.length)
+      return stats
     } catch (error) {
-      console.error('Error al obtener estadísticas rápidas:', error)
+      console.error('❌ [Dashboard] Error al obtener estadísticas rápidas:', error)
       return []
     }
   }
@@ -295,31 +338,51 @@ export class DashboardService {
     events: boolean
     locations: boolean
     users: boolean
+    eventLocations: boolean
+    roles: boolean
     overall: boolean
   }> {
     try {
-      const [eventsHealth, locationsHealth, usersHealth] = await Promise.allSettled([
+      console.log('🏥 [Dashboard] Verificando salud de APIs...')
+
+      const [eventsHealth, locationsHealth, usersHealth, eventLocationsHealth, rolesHealth] = await Promise.allSettled([
         EventService.getAllEvents(),
         LocationService.getAllLocations(),
         UserService.getUsers({ page: 1, limit: 1 }),
+        EventLocationService.getAllEventLocations(),
+        RoleService.getRoles({ page: 1, limit: 1 }),
       ])
 
       const events = eventsHealth.status === 'fulfilled'
       const locations = locationsHealth.status === 'fulfilled'
       const users = usersHealth.status === 'fulfilled'
+      const eventLocations = eventLocationsHealth.status === 'fulfilled'
+      const roles = rolesHealth.status === 'fulfilled'
+
+      console.log('🏥 [Dashboard] Estado de APIs:', {
+        eventos: events ? '✅' : '❌',
+        ubicaciones: locations ? '✅' : '❌',
+        usuarios: users ? '✅' : '❌',
+        relaciones: eventLocations ? '✅' : '❌',
+        roles: roles ? '✅' : '❌'
+      })
 
       return {
         events,
         locations,
         users,
-        overall: events && locations && users,
+        eventLocations,
+        roles,
+        overall: events || locations || users || eventLocations || roles, // Al menos una API debe funcionar
       }
     } catch (error) {
-      console.error('Error al verificar salud de APIs:', error)
+      console.error('❌ [Dashboard] Error al verificar salud de APIs:', error)
       return {
         events: false,
         locations: false,
         users: false,
+        eventLocations: false,
+        roles: false,
         overall: false,
       }
     }
