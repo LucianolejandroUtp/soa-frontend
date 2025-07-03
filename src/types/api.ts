@@ -5,6 +5,7 @@ export interface User {
   name: string
   lastname: string
   email: string
+  documentNumber?: string
   password?: string // Solo para creación
   rolId: number
   isActive: boolean
@@ -27,8 +28,9 @@ export interface CreateUserDto {
   name: string
   lastname: string
   email: string
+  documentNumber: string
   password: string
-  rolId: number // Backend espera rol_id con underscore
+  rolId: number
 }
 
 export interface UpdateUserDto {
@@ -36,9 +38,12 @@ export interface UpdateUserDto {
   name?: string
   lastname?: string
   email?: string
-  password?: string
-  rolId?: number // Backend espera rol_id con underscore
-  isActive?: boolean
+  rolId?: number
+}
+
+export interface UpdatePasswordDto {
+  id: number
+  password: string
 }
 
 // DTOs para Roles
@@ -85,6 +90,7 @@ export interface UserFormData {
   name: string
   lastname: string
   email: string
+  documentNumber: string
   password: string
   rolId: number | null
 }

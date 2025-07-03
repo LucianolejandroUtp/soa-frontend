@@ -4,6 +4,7 @@ import type {
   User,
   CreateUserDto,
   UpdateUserDto,
+  UpdatePasswordDto,
   PaginationParams,
   PaginatedResponse,
 } from '@/types/api'
@@ -84,6 +85,14 @@ export class UserService {
   }
 
   /**
+   * Actualizar contraseña de un usuario
+   */
+  static async updatePassword(data: UpdatePasswordDto): Promise<void> {
+    console.log('📤 Actualizando contraseña para usuario ID:', data.id)
+    await apiClient.post(`${this.BASE_PATH}/update-password`, data)
+  }
+
+  /**
    * Eliminar usuario (borrado lógico)
    */
   static async deleteUser(id: number): Promise<void> {
@@ -94,7 +103,7 @@ export class UserService {
    */ static async searchUsers(searchTerm: string): Promise<User[]> {
     const response = await this.getUsers({ search: searchTerm, limit: 50 })
     return response.response.users || []
-  } /**
+  }  /**
    * Registrar un nuevo usuario (wrapper de createUser para registro público)
    * Asigna automáticamente el rol de "cliente" al usuario registrado
    */
@@ -102,12 +111,14 @@ export class UserService {
     firstName: string
     lastName: string
     email: string
+    documentNumber: string
     password: string
   }): Promise<User> {
     const createUserDto: CreateUserDto = {
       name: userData.firstName,
       lastname: userData.lastName,
       email: userData.email,
+      documentNumber: userData.documentNumber,
       password: userData.password,
       rolId: this.ROLE_IDS.CLIENTE, // Asigna específicamente el rol de "cliente"
     }
@@ -126,7 +137,7 @@ export class UserService {
       console.error('❌ Error en registro:', error)
       throw error
     }
-  } /**
+  }/**
    * Obtener los IDs de roles disponibles
    */
   static getRoleIds() {

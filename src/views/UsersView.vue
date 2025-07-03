@@ -54,6 +54,9 @@
               <div class="user-details">
                 <div class="user-name">{{ scope.row.name }} {{ scope.row.lastname }}</div>
                 <div class="user-email">{{ scope.row.email }}</div>
+                <div v-if="scope.row.documentNumber" class="user-document">
+                  Doc: {{ scope.row.documentNumber }}
+                </div>
               </div>
             </div>
           </template>
@@ -77,10 +80,19 @@
           <template #default="scope">
             {{ formatDate(scope.row.createdAt) }}
           </template> </el-table-column
-        ><el-table-column label="Acciones" width="300" fixed="right">
+        >        <el-table-column label="Acciones" width="350" fixed="right">
           <template #default="scope">
             <el-tooltip content="Editar usuario" placement="top">
               <el-button type="primary" size="small" :icon="Edit" @click="editUser(scope.row)" />
+            </el-tooltip>
+
+            <el-tooltip content="Cambiar contraseña" placement="top">
+              <el-button 
+                type="warning" 
+                size="small" 
+                :icon="Key" 
+                @click="openChangePasswordDialog(scope.row)" 
+              />
             </el-tooltip>
 
             <el-tooltip
@@ -151,6 +163,15 @@
           <el-input v-model="userForm.email" type="email" placeholder="correo@ejemplo.com" />
         </el-form-item>
 
+        <el-form-item label="Documento" prop="documentNumber" v-if="!isEditing">
+          <el-input
+            v-model="userForm.documentNumber"
+            placeholder="Número de documento"
+            maxlength="20"
+            show-word-limit
+          />
+        </el-form-item>
+
         <el-form-item label="Contraseña" prop="password" :required="!isEditing">
           <el-input
             v-model="userForm.password"
@@ -176,26 +197,83 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- Dialog para cambiar contraseña -->
+    <el-dialog
+      v-model="showPasswordDialog"
+      title="Cambiar Contraseña"
+      width="400"
+      @close="resetPasswordForm"
+    >
+      <el-form
+        ref="passwordFormRef"
+        :model="passwordForm"
+        :rules="passwordRules"
+        label-width="120px"
+        label-position="left"
+      >
+        <el-form-item label="Usuario">
+          <el-input 
+            :value="selectedUser?.name + ' ' + selectedUser?.lastname" 
+            disabled 
+          />
+        </el-form-item>
+
+        <el-form-item label="Nueva Contraseña" prop="password">
+          <el-input
+            v-model="passwordForm.password"
+            type="password"
+            placeholder="Mínimo 6 caracteres"
+            show-password
+          />
+        </el-form-item>
+
+        <el-form-item label="Confirmar" prop="confirmPassword">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            placeholder="Confirme la nueva contraseña"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showPasswordDialog = false">Cancelar</el-button>
+          <el-button type="primary" @click="savePassword" :loading="loading">
+            Actualizar Contraseña
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search, Edit, Delete, Check, CloseBold } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Check, CloseBold, Key } from '@element-plus/icons-vue'
 import { UserService } from '@/services/userService'
 import { RoleService } from '@/services/roleService'
-import type { User, Role, CreateUserDto, UpdateUserDto } from '@/types/api'
+import type { User, Role, CreateUserDto, UpdateUserDto, UpdatePasswordDto } from '@/types/api'
 
 // Referencias
 const userFormRef = ref<FormInstance>()
+const passwordFormRef = ref<FormInstance>()
 
 // Estados reactivos
 const users = ref<User[]>([])
-const roles = ref<Role[]>([])
+const roles = ref<Role[]>([
+  { id: 1, name: 'Administrador', isActive: true, deleted: false, createdAt: '', updatedAt: '' },
+  { id: 2, name: 'Vendedor', isActive: true, deleted: false, createdAt: '', updatedAt: '' },
+  { id: 3, name: 'Cliente', isActive: true, deleted: false, createdAt: '', updatedAt: '' },
+])
 const loading = ref(false)
 const showCreateDialog = ref(false)
+const showPasswordDialog = ref(false)
 const isEditing = ref(false)
+const selectedUser = ref<User | null>(null)
 // TODO: Descomenta cuando el backend implemente filtros
 // const searchQuery = ref('')
 // const statusFilter = ref<boolean | null>(null)
@@ -217,8 +295,15 @@ const userForm = reactive({
   name: '',
   lastname: '',
   email: '',
+  documentNumber: '',
   password: '',
   rolId: null as number | null,
+})
+
+// Formulario para cambiar contraseña
+const passwordForm = reactive({
+  password: '',
+  confirmPassword: '',
 })
 
 // Reglas de validación
@@ -237,6 +322,11 @@ const userRules: FormRules = reactive({
     { required: true, message: 'El email es requerido', trigger: 'blur' },
     { type: 'email', message: 'Formato de email inválido', trigger: 'blur' },
   ],
+  documentNumber: [
+    { required: true, message: 'El número de documento es requerido', trigger: 'blur' },
+    { min: 5, message: 'El documento debe tener al menos 5 caracteres', trigger: 'blur' },
+    { max: 20, message: 'El documento no puede exceder 20 caracteres', trigger: 'blur' },
+  ],
   password: [
     ...(isEditing.value
       ? []
@@ -246,6 +336,27 @@ const userRules: FormRules = reactive({
   rolId: [
     { required: true, message: 'El rol es requerido', trigger: 'change' },
     { type: 'number', min: 1, message: 'Debe seleccionar un rol válido', trigger: 'change' },
+  ],
+})
+
+// Reglas de validación para cambio de contraseña
+const passwordRules: FormRules = reactive({
+  password: [
+    { required: true, message: 'La contraseña es requerida', trigger: 'blur' },
+    { min: 6, message: 'La contraseña debe tener al menos 6 caracteres', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: 'Confirme la contraseña', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (value !== passwordForm.password) {
+          callback(new Error('Las contraseñas no coinciden'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur',
+    },
   ],
 })
 
@@ -309,14 +420,7 @@ const fetchUsers = async () => {
   }
 }
 
-const fetchRoles = async () => {
-  try {
-    roles.value = await RoleService.getActiveRoles()
-  } catch (error) {
-    console.error('❌ Error al cargar roles:', error)
-    ElMessage.error('Error al cargar roles')
-  }
-}
+
 
 const editUser = (user: User) => {
   isEditing.value = true
@@ -324,9 +428,16 @@ const editUser = (user: User) => {
   userForm.name = user.name
   userForm.lastname = user.lastname
   userForm.email = user.email
+  userForm.documentNumber = user.documentNumber || ''
   userForm.password = ''
   userForm.rolId = user.rolId
   showCreateDialog.value = true
+}
+
+const openChangePasswordDialog = (user: User) => {
+  selectedUser.value = user
+  resetPasswordForm()
+  showPasswordDialog.value = true
 }
 
 const deleteUser = async (user: User) => {
@@ -396,11 +507,7 @@ const saveUser = async () => {
             name: userForm.name,
             lastname: userForm.lastname,
             email: userForm.email,
-            rolId: userForm.rolId || undefined, // Corregido para enviar rol_id
-          }
-
-          if (userForm.password) {
-            updateData.password = userForm.password
+            rolId: userForm.rolId || undefined,
           }
 
           await UserService.updateUser(updateData)
@@ -410,8 +517,9 @@ const saveUser = async () => {
             name: userForm.name,
             lastname: userForm.lastname,
             email: userForm.email,
+            documentNumber: userForm.documentNumber,
             password: userForm.password,
-            rolId: userForm.rolId || 3, // Corregido para enviar rol_id
+            rolId: userForm.rolId || 3,
           }
 
           await UserService.createUser(createData)
@@ -436,10 +544,46 @@ const resetForm = () => {
   userForm.name = ''
   userForm.lastname = ''
   userForm.email = ''
+  userForm.documentNumber = ''
   userForm.password = ''
   userForm.rolId = null
   isEditing.value = false
   userFormRef.value?.resetFields()
+}
+
+const resetPasswordForm = () => {
+  passwordForm.password = ''
+  passwordForm.confirmPassword = ''
+  passwordFormRef.value?.resetFields()
+}
+
+const savePassword = async () => {
+  if (!passwordFormRef.value || !selectedUser.value) return
+
+  await passwordFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        loading.value = true
+
+        const updatePasswordData: UpdatePasswordDto = {
+          id: selectedUser.value!.id,
+          password: passwordForm.password,
+        }
+
+        await UserService.updatePassword(updatePasswordData)
+        ElMessage.success('Contraseña actualizada exitosamente')
+        
+        resetPasswordForm()
+        showPasswordDialog.value = false
+        selectedUser.value = null
+      } catch (error) {
+        console.error('Error updating password:', error)
+        ElMessage.error('Error al actualizar contraseña')
+      } finally {
+        loading.value = false
+      }
+    }
+  })
 }
 
 const applyFilters = () => {
@@ -476,7 +620,7 @@ const handlePageChange = (page: number) => {
 
 // Inicialización
 onMounted(async () => {
-  await Promise.all([fetchUsers(), fetchRoles()])
+  await fetchUsers()
 })
 </script>
 <style scoped>
@@ -517,6 +661,12 @@ onMounted(async () => {
 .user-email {
   font-size: 12px;
   color: #909399;
+}
+
+.user-document {
+  font-size: 11px;
+  color: #909399;
+  font-style: italic;
 }
 
 .pagination-container {
