@@ -27,7 +27,7 @@ export interface UpdateTicketDto {
 }
 
 export class TicketService {
-  private static readonly BASE_PATH = '/tickets'
+  private static readonly BASE_PATH = '/api/tickets'
 
   /**
    * Obtener todos los tickets

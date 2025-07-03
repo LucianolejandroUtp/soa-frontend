@@ -34,7 +34,7 @@ export interface PartnerTokenResponse {
 }
 
 export class PartnerService {
-  private static readonly BASE_PATH = '/partners'
+  private static readonly BASE_PATH = '/api/partners'
 
   /**
    * Obtener todos los partners

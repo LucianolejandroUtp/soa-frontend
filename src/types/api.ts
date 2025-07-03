@@ -123,21 +123,21 @@ export interface Event {
 export interface CreateEventDto {
   name: string
   description: string
-  start_date: string // Backend espera snake_case
-  end_date: string
-  sale_start: string
-  sale_end: string
+  startDate: string // Backend espera camelCase, no snake_case
+  endDate: string
+  saleStart: string
+  saleEnd: string
 }
 
 export interface UpdateEventDto {
-  event_id: number
+  id: number
   name?: string
   description?: string
-  start_date?: string
-  end_date?: string
-  sale_start?: string
-  sale_end?: string
-  is_active?: boolean
+  startDate?: string
+  endDate?: string
+  saleStart?: string
+  saleEnd?: string
+  isActive?: boolean
   deleted?: boolean
 }
 

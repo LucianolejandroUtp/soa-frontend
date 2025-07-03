@@ -9,11 +9,13 @@ import type {
 } from '@/types/api'
 
 export class EventLocationService {
+  private static readonly BASE_PATH = '/events/event-locations'
+
   /**
    * Obtener todas las relaciones evento-ubicación
    */
   static async getAllEventLocations(): Promise<EventLocationBasic[]> {
-    const response = await apiClient.get<EventLocationBasic[]>('/event-locations')
+    const response = await apiClient.get<EventLocationBasic[]>(this.BASE_PATH)
     return response.data
   }
 
@@ -21,52 +23,45 @@ export class EventLocationService {
    * Obtener relaciones evento-ubicación activas
    */
   static async getActiveEventLocations(): Promise<EventLocation[]> {
-    const response = await apiClient.get<EventLocation[]>('/event-locations/active')
+    const response = await apiClient.get<EventLocation[]>(`${this.BASE_PATH}/active`)
     return response.data
   }
 
   /**
    * Obtener relaciones evento-ubicación con paginación
+   * CORREGIDO: Usar POST con body según especificación
    */
   static async getEventLocationsPaginated(
     params: EventPaginationParams,
   ): Promise<EventPaginatedResponse<EventLocation>> {
-    const queryParams = new URLSearchParams()
+    try {
+      // Construir body para POST según especificación
+      const requestBody = {
+        page: params.page || 1,
+        limit: params.items || 10,
+      }
 
-    // SOA-BUS usa page basado en 1
-    if (params.page !== undefined) {
-      queryParams.append('page', params.page.toString())
+      console.log('🔍 [EventLocationService] Solicitando relaciones paginadas con POST:', requestBody)
+
+      const response = await apiClient.post<EventPaginatedResponse<EventLocation>>(
+        `${this.BASE_PATH}/paginated`,
+        requestBody
+      )
+
+      console.log('📥 [EventLocationService] Respuesta recibida:', response.data)
+
+      return response.data
+    } catch (error: any) {
+      console.error('❌ [EventLocationService] Error en paginación:', error.response?.status, error.message)
+      throw error
     }
-
-    if (params.items !== undefined) {
-      queryParams.append('items', params.items.toString())
-    }
-
-    console.log('🔍 [EventLocationService] Solicitando relaciones paginadas:', {
-      page: params.page,
-      items: params.items
-    })
-
-    const response = await apiClient.get<EventPaginatedResponse<EventLocation>>(
-      `/event-locations/paginated?${queryParams.toString()}`,
-    )
-
-    console.log('📥 [EventLocationService] Respuesta recibida:', response.data)
-
-    // Ajustar el currentPage si es necesario para la UI
-    if (response.data.pagination) {
-      // Si el backend devuelve basado en 0, ajustar para UI basada en 1
-      // response.data.pagination.currentPage = response.data.pagination.currentPage + 1
-    }
-
-    return response.data
   }
 
   /**
    * Obtener relación evento-ubicación por ID
    */
   static async getEventLocationById(id: number): Promise<EventLocation> {
-    const response = await apiClient.get<EventLocation>(`/event-locations/${id}`)
+    const response = await apiClient.get<EventLocation>(`${this.BASE_PATH}/${id}`)
     return response.data
   }
 
@@ -74,7 +69,16 @@ export class EventLocationService {
    * Obtener relaciones por evento
    */
   static async getEventLocationsByEvent(eventId: number): Promise<EventLocation[]> {
-    const response = await apiClient.get<EventLocation[]>(`/event-locations/event/${eventId}`)
+    const response = await apiClient.get<EventLocation[]>(`${this.BASE_PATH}/event/${eventId}`)
+    return response.data
+  }
+
+  /**
+   * Obtener relaciones activas por evento
+   * NUEVO: Según especificación
+   */
+  static async getActiveEventLocationsByEvent(eventId: number): Promise<EventLocation[]> {
+    const response = await apiClient.get<EventLocation[]>(`${this.BASE_PATH}/event/${eventId}/active`)
     return response.data
   }
 
@@ -83,7 +87,7 @@ export class EventLocationService {
    */
   static async getEventLocationsByLocation(locationId: number): Promise<EventLocation[]> {
     const response = await apiClient.get<EventLocation[]>(
-      `/event-locations/location/${locationId}`,
+      `${this.BASE_PATH}/location/${locationId}`,
     )
     return response.data
   }
@@ -95,7 +99,7 @@ export class EventLocationService {
     eventLocationData: CreateEventLocationDto,
   ): Promise<EventLocation> {
     const response = await apiClient.post<EventLocation>(
-      '/event-locations',
+      this.BASE_PATH,
       eventLocationData,
     )
     return response.data
@@ -108,7 +112,7 @@ export class EventLocationService {
     eventLocationData: UpdateEventLocationDto,
   ): Promise<EventLocation> {
     const response = await apiClient.put<EventLocation>(
-      `/event-locations/${eventLocationData.id}`,
+      `${this.BASE_PATH}/${eventLocationData.id}`,
       eventLocationData,
     )
     return response.data
@@ -118,7 +122,7 @@ export class EventLocationService {
    * Eliminar relación evento-ubicación
    */
   static async deleteEventLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClient.delete<{ message: string }>(`/event-locations/${id}`)
+    const response = await apiClient.delete<{ message: string }>(`${this.BASE_PATH}/${id}`)
     return response.data
   }
 
@@ -127,7 +131,7 @@ export class EventLocationService {
    */
   static async activateEventLocation(id: number): Promise<{ message: string }> {
     const response = await apiClient.patch<{ message: string }>(
-      `/event-locations/${id}/activate`,
+      `${this.BASE_PATH}/${id}/activate`,
     )
     return response.data
   }
@@ -137,7 +141,18 @@ export class EventLocationService {
    */
   static async deactivateEventLocation(id: number): Promise<{ message: string }> {
     const response = await apiClient.patch<{ message: string }>(
-      `/event-locations/${id}/deactivate`,
+      `${this.BASE_PATH}/${id}/deactivate`,
+    )
+    return response.data
+  }
+
+  /**
+   * Verificar disponibilidad de ubicación de evento
+   * NUEVO: Según especificación
+   */
+  static async checkEventLocationAvailability(id: number): Promise<{ available: boolean; message?: string }> {
+    const response = await apiClient.get<{ available: boolean; message?: string }>(
+      `${this.BASE_PATH}/${id}/available`,
     )
     return response.data
   }

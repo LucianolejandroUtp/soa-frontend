@@ -8,11 +8,13 @@ import type {
 } from '@/types/api'
 
 export class LocationService {
+  private static readonly BASE_PATH = '/events/locations'
+
   /**
    * Obtener todas las ubicaciones (incluidas inactivas)
    */
   static async getAllLocations(): Promise<Location[]> {
-    const response = await apiClient.get<Location[]>('/locations')
+    const response = await apiClient.get<Location[]>(this.BASE_PATH)
     return response.data
   }
 
@@ -20,11 +22,12 @@ export class LocationService {
    * Obtener solo ubicaciones activas
    */
   static async getActiveLocations(): Promise<Location[]> {
-    const response = await apiClient.get<Location[]>('/locations/active')
+    const response = await apiClient.get<Location[]>(`${this.BASE_PATH}/active`)
     return response.data
   }
   /**
    * Obtener ubicaciones con paginación
+   * CORREGIDO: Usar GET con query params según especificación
    */
   static async getLocationsPaginated(
     params: LocationPaginationParams,
@@ -33,30 +36,23 @@ export class LocationService {
     const queryParams: Record<string, string | number> = {}
 
     if (params.page !== undefined) {
-      // SOA-BUS usa paginación basada en 1, no en 0
       queryParams.page = params.page
     }
 
     if (params.items !== undefined) {
-      queryParams.items = params.items
+      queryParams.limit = params.items // Usar 'limit' según especificación
     }
-    
+
     console.log('🔍 [LocationService] Solicitando ubicaciones paginadas:', queryParams)
-    
+
     const response = await apiClient.get<EventPaginatedResponse<Location>>(
-      '/locations/paginated',
+      `${this.BASE_PATH}/paginated`,
       {
         params: queryParams,
       },
     )
 
     console.log('📥 [LocationService] Respuesta recibida:', response.data)
-
-    // Ajustar el currentPage si es necesario para la UI
-    if (response.data.pagination) {
-      // Si el backend devuelve basado en 0, ajustar para UI basada en 1
-      // response.data.pagination.currentPage = response.data.pagination.currentPage + 1
-    }
 
     return response.data
   }
@@ -65,7 +61,7 @@ export class LocationService {
    * Obtener ubicación por ID
    */
   static async getLocationById(id: number): Promise<Location> {
-    const response = await apiClient.get<Location>(`/locations/${id}`)
+    const response = await apiClient.get<Location>(`${this.BASE_PATH}/${id}`)
     return response.data
   }
 
@@ -74,7 +70,7 @@ export class LocationService {
    */
   static async getLocationByName(name: string): Promise<Location> {
     const response = await apiClient.get<Location>(
-      `/locations/name/${encodeURIComponent(name)}`,
+      `${this.BASE_PATH}/name/${encodeURIComponent(name)}`,
     )
     return response.data
   }
@@ -83,7 +79,7 @@ export class LocationService {
    * Crear nueva ubicación
    */
   static async createLocation(locationData: CreateLocationDto): Promise<Location> {
-    const response = await apiClient.post<Location>('/locations', locationData)
+    const response = await apiClient.post<Location>(this.BASE_PATH, locationData)
     return response.data
   }
 
@@ -92,7 +88,7 @@ export class LocationService {
    */
   static async updateLocation(locationData: UpdateLocationDto): Promise<Location> {
     const response = await apiClient.put<Location>(
-      `/locations/${locationData.id}`,
+      `${this.BASE_PATH}/${locationData.id}`,
       locationData,
     )
     return response.data
@@ -102,7 +98,7 @@ export class LocationService {
    * Eliminar ubicación
    */
   static async deleteLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClient.delete<{ message: string }>(`/locations/${id}`)
+    const response = await apiClient.delete<{ message: string }>(`${this.BASE_PATH}/${id}`)
     return response.data
   }
 
@@ -110,7 +106,7 @@ export class LocationService {
    * Activar ubicación
    */
   static async activateLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClient.patch<{ message: string }>(`/locations/${id}/activate`)
+    const response = await apiClient.patch<{ message: string }>(`${this.BASE_PATH}/${id}/activate`)
     return response.data
   }
 
@@ -118,7 +114,7 @@ export class LocationService {
    * Desactivar ubicación
    */
   static async deactivateLocation(id: number): Promise<{ message: string }> {
-    const response = await apiClient.patch<{ message: string }>(`/locations/${id}/deactivate`)
+    const response = await apiClient.patch<{ message: string }>(`${this.BASE_PATH}/${id}/deactivate`)
     return response.data
   }
 }

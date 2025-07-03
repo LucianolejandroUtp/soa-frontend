@@ -3,7 +3,10 @@
     <!-- Header -->
     <div class="page-header">
       <h1>Gestión de Eventos</h1>
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nuevo Evento </el-button>
+      <div style="display: flex; gap: 10px;">
+        <!-- ... -->
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog"> Nuevo Evento </el-button>
+      </div>
     </div>
     <!-- Filtros y búsqueda -->
     <el-card class="filter-card">
@@ -196,7 +199,7 @@
                 type="datetime"
                 placeholder="Fecha y hora de inicio"
                 format="DD/MM/YYYY HH:mm"
-                value-format="YYYY-MM-DDTHH:mm:ss.sssZ"
+                value-format="YYYY-MM-DDTHH:mm:ss.000Z"
                 style="width: 100%"
               />
             </el-form-item>
@@ -208,7 +211,7 @@
                 type="datetime"
                 placeholder="Fecha y hora de fin"
                 format="DD/MM/YYYY HH:mm"
-                value-format="YYYY-MM-DDTHH:mm:ss.sssZ"
+                value-format="YYYY-MM-DDTHH:mm:ss.000Z"
                 style="width: 100%"
               />
             </el-form-item>
@@ -223,7 +226,7 @@
                 type="datetime"
                 placeholder="Inicio de ventas"
                 format="DD/MM/YYYY HH:mm"
-                value-format="YYYY-MM-DDTHH:mm:ss.sssZ"
+                value-format="YYYY-MM-DDTHH:mm:ss.000Z"
                 style="width: 100%"
               />
             </el-form-item>
@@ -235,7 +238,7 @@
                 type="datetime"
                 placeholder="Fin de ventas"
                 format="DD/MM/YYYY HH:mm"
-                value-format="YYYY-MM-DDTHH:mm:ss.sssZ"
+                value-format="YYYY-MM-DDTHH:mm:ss.000Z"
                 style="width: 100%"
               />
             </el-form-item>
@@ -349,7 +352,9 @@ const formatDate = (dateString: string) => {
 
 // Computed para eventos filtrados
 const filteredEvents = computed(() => {
-  const result = filterArrayLocally(events.value, {
+  // Filtrar primero los eventos que NO estén marcados como deleted
+  const notDeleted = events.value.filter((event: Event) => !event.deleted)
+  const result = filterArrayLocally(notDeleted, {
     searchFields: ['name', 'description'],
     customFilters: {
       status: (event: Event, filterValue: string) => {
@@ -379,23 +384,24 @@ const fetchEvents = async () => {
 
     // Primero intentamos con paginación, si falla usamos getAllEvents
     try {
+      // Obtener todos los eventos (no paginados) y paginar en frontend para controlar los eliminados
+      const allEvents = await EventService.getAllEvents()
+      const notDeleted = allEvents.filter((event: Event) => !event.deleted)
+
+      // Paginar en frontend
+      const startIndex = (currentPage.value - 1) * pageSize.value
+      const endIndex = startIndex + pageSize.value
+      events.value = notDeleted.slice(startIndex, endIndex)
+      totalEvents.value = notDeleted.length
+    } catch {
+      // Si falla getAllEvents, intentar fallback con paginación (menos preciso)
       const response = await EventService.getEventsPaginated({
         page: currentPage.value,
         items: pageSize.value,
       })
-
-      events.value = response.response || []
-      totalEvents.value = response.pagination?.totalItems || 0
-    } catch {
-      // Fallback: obtener todos los eventos y simular paginación en el frontend
-      const allEvents = await EventService.getAllEvents()
-
-      // Simular paginación en el frontend
-      const startIndex = (currentPage.value - 1) * pageSize.value
-      const endIndex = startIndex + pageSize.value
-
-      events.value = allEvents.slice(startIndex, endIndex)
-      totalEvents.value = allEvents.length
+      const notDeleted = (response.response || []).filter((event: Event) => !event.deleted)
+      events.value = notDeleted
+      totalEvents.value = notDeleted.length
     }
   } catch (error) {
     console.error('❌ Error al cargar eventos:', error)
@@ -412,10 +418,39 @@ const editEvent = (event: Event) => {
   eventForm.id = event.id
   eventForm.name = event.name
   eventForm.description = event.description
-  eventForm.startDate = event.startDate
-  eventForm.endDate = event.endDate
-  eventForm.saleStart = event.saleStart
-  eventForm.saleEnd = event.saleEnd
+  
+  // Asegurar que las fechas estén en formato ISO correcto para el date-picker
+  const formatDateForPicker = (dateString: string) => {
+    if (!dateString) return ''
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return ''
+      return date.toISOString()
+    } catch {
+      return ''
+    }
+  }
+  
+  eventForm.startDate = formatDateForPicker(event.startDate)
+  eventForm.endDate = formatDateForPicker(event.endDate)
+  eventForm.saleStart = formatDateForPicker(event.saleStart)
+  eventForm.saleEnd = formatDateForPicker(event.saleEnd)
+  
+  console.log('🔍 [EventsView] Editando evento, fechas cargadas:', {
+    original: {
+      startDate: event.startDate,
+      endDate: event.endDate,
+      saleStart: event.saleStart,
+      saleEnd: event.saleEnd,
+    },
+    formatted: {
+      startDate: eventForm.startDate,
+      endDate: eventForm.endDate,
+      saleStart: eventForm.saleStart,
+      saleEnd: eventForm.saleEnd,
+    }
+  })
+  
   showCreateDialog.value = true
 }
 
@@ -479,6 +514,9 @@ const deleteEvent = async (event: Event) => {
   }
 }
 
+
+
+
 const saveEvent = async () => {
   if (!eventFormRef.value) return
 
@@ -487,29 +525,98 @@ const saveEvent = async () => {
       try {
         loading.value = true
 
+        // Validar que todos los campos de fecha estén presentes y sean válidos
+        const requiredDates = [
+          eventForm.startDate,
+          eventForm.endDate,
+          eventForm.saleStart,
+          eventForm.saleEnd,
+        ]
+        
+        const anyEmpty = requiredDates.some(
+          (d) => !d || d === '' || d === null || d === undefined
+        )
+        
+        if (anyEmpty) {
+          ElMessage.error('Todos los campos de fecha son obligatorios y no pueden ser vacíos')
+          loading.value = false
+          return
+        }
+
+        // Debug: Log valores originales del formulario
+        console.log('🔍 [EventsView] Valores originales del formulario:', {
+          startDate: eventForm.startDate,
+          endDate: eventForm.endDate,
+          saleStart: eventForm.saleStart,
+          saleEnd: eventForm.saleEnd,
+          types: {
+            startDate: typeof eventForm.startDate,
+            endDate: typeof eventForm.endDate,
+            saleStart: typeof eventForm.saleStart,
+            saleEnd: typeof eventForm.saleEnd,
+          }
+        })
+
+        // Función para normalizar fechas - asegurar formato ISO
+        const normalizeDate = (date: string | Date): string => {
+          if (!date) {
+            console.warn('⚠️ Fecha vacía detectada, usando fecha actual como fallback')
+            return new Date().toISOString()
+          }
+          
+          if (typeof date === 'string') {
+            // Si ya es string ISO válido, devolver tal cual
+            if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(date)) {
+              return date
+            }
+            // Si es string pero no ISO completo, intentar parsear
+            const parsed = new Date(date)
+            if (!isNaN(parsed.getTime())) {
+              return parsed.toISOString()
+            }
+            console.warn('⚠️ String de fecha inválido:', date)
+            return new Date().toISOString()
+          }
+          
+          if (date instanceof Date) {
+            return date.toISOString()
+          }
+          
+          console.warn('⚠️ Tipo de fecha desconocido:', typeof date, date)
+          return new Date().toISOString()
+        }
+
         if (isEditing.value) {
           const updateData: UpdateEventDto = {
-            event_id: eventForm.id,
+            id: eventForm.id,
             name: eventForm.name,
             description: eventForm.description,
-            start_date: eventForm.startDate,
-            end_date: eventForm.endDate,
-            sale_start: eventForm.saleStart,
-            sale_end: eventForm.saleEnd,
+            startDate: normalizeDate(eventForm.startDate),
+            endDate: normalizeDate(eventForm.endDate),
+            saleStart: normalizeDate(eventForm.saleStart),
+            saleEnd: normalizeDate(eventForm.saleEnd),
           }
 
-          await EventService.updateEvent(updateData)
-          ElMessage.success('Evento actualizado exitosamente')
+          // Forzar el envío correcto de fechas y mostrar error si la respuesta no es exitosa
+          try {
+            await EventService.updateEvent(updateData)
+            ElMessage.success('Evento actualizado exitosamente')
+          } catch (err) {
+            console.error('❌ Error actualizando evento:', err)
+            ElMessage.error('Error al actualizar evento')
+            throw err
+          }
         } else {
           const createData: CreateEventDto = {
             name: eventForm.name,
             description: eventForm.description,
-            start_date: eventForm.startDate,
-            end_date: eventForm.endDate,
-            sale_start: eventForm.saleStart,
-            sale_end: eventForm.saleEnd,
+            startDate: normalizeDate(eventForm.startDate),
+            endDate: normalizeDate(eventForm.endDate),
+            saleStart: normalizeDate(eventForm.saleStart),
+            saleEnd: normalizeDate(eventForm.saleEnd),
           }
 
+          console.log('🔍 [EventsView] Datos para CREATE:', createData)
           await EventService.createEvent(createData)
           ElMessage.success('Evento creado exitosamente')
         }
@@ -518,7 +625,7 @@ const saveEvent = async () => {
         showCreateDialog.value = false
         await fetchEvents()
       } catch (error) {
-        console.error('Error saving event:', error)
+        console.error('❌ Error saving event:', error)
         ElMessage.error('Error al guardar evento')
       } finally {
         loading.value = false
@@ -543,6 +650,32 @@ const openCreateDialog = () => {
   resetForm()
   showCreateDialog.value = true
 }
+
+// Función de prueba temporal para debugging
+const testCreateEvent = async () => {
+  try {
+    const testData: CreateEventDto = {
+      name: 'Evento de Prueba Corregido',
+      description: 'Descripción de prueba con camelCase',
+      startDate: '2025-07-15T18:00:00.000Z',
+      endDate: '2025-07-15T21:00:00.000Z',
+      saleStart: '2025-07-01T00:00:00.000Z',
+      saleEnd: '2025-07-14T23:59:59.000Z',
+    }
+    
+    console.log('🧪 [EventsView] Enviando datos de prueba con camelCase:', testData)
+    const result = await EventService.createEvent(testData)
+    console.log('✅ [EventsView] Evento de prueba creado exitosamente:', result)
+    ElMessage.success('Evento de prueba creado exitosamente con fechas!')
+    await fetchEvents()
+  } catch (error) {
+    console.error('❌ [EventsView] Error en prueba de creación:', error)
+    ElMessage.error('Error en prueba de creación de evento')
+  }
+}
+
+// Comentar/descomentar esta línea para probar
+// testCreateEvent()
 
 const handleSizeChange = (size: number) => {
   pageSize.value = size

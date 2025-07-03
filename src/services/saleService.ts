@@ -30,7 +30,7 @@ export interface UpdateSaleDto {
 }
 
 export class SaleService {
-  private static readonly BASE_PATH = '/sales'
+  private static readonly BASE_PATH = '/api/sales'
 
   /**
    * Obtener todas las ventas

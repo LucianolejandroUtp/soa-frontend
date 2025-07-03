@@ -31,7 +31,7 @@ export interface FlowStatus {
 }
 
 export class FlowService {
-  private static readonly BASE_PATH = '/flows'
+  private static readonly BASE_PATH = '/api/flows'
 
   /**
    * Orquestación completa de venta
@@ -47,7 +47,7 @@ export class FlowService {
       })
 
       const response = await apiClient.post<SaleFlowResponse>(`${this.BASE_PATH}/create-sale`, saleData)
-      
+
       console.log('✅ Orquestación de venta completada:', {
         transactionId: response.data.transactionId,
         saleId: response.data.sale?.id,
@@ -57,7 +57,7 @@ export class FlowService {
       return response.data
     } catch (error: any) {
       console.error('❌ Error en orquestación de venta:', error)
-      
+
       if (error.response?.status === 400) {
         throw new Error('Datos de venta inválidos')
       } else if (error.response?.status === 402) {
