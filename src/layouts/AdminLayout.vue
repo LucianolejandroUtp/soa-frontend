@@ -49,6 +49,11 @@
           <template #title>Relaciones</template>
         </el-menu-item>
 
+        <el-menu-item index="/partners">
+          <el-icon><Avatar /></el-icon>
+          <template #title>Partners</template>
+        </el-menu-item>
+
         <el-divider />
 
         <el-menu-item index="/settings">
@@ -146,6 +151,7 @@ import {
   Calendar,
   Location,
   Connection,
+  Avatar,
   SwitchButton,
 } from '@element-plus/icons-vue'
 
@@ -169,6 +175,7 @@ const currentPageTitle = computed(() => {
     '/events': 'Eventos',
     '/locations': 'Ubicaciones',
     '/event-locations': 'Relaciones Evento-Ubicación',
+    '/partners': 'Gestión de Partners',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }

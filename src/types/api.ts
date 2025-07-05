@@ -250,3 +250,78 @@ export interface LocationFilters {
   capacity?: number
   isActive?: boolean | null
 }
+
+// ===== TIPOS PARA SOA-PARTNERS =====
+
+// Partners
+export interface Partner {
+  id: number
+  name: string
+  lastname: string
+  email: string
+  token: string
+  createdAt: string
+  updatedAt: string
+  deleted?: boolean
+  isActive?: boolean
+}
+
+export interface CreatePartnerDto {
+  name: string
+  lastname: string
+  email: string
+  password: string
+}
+
+export interface UpdatePartnerDto {
+  id: number
+  name: string
+  lastname: string
+  email: string
+  token: string
+}
+
+export interface LoginPartnerDto {
+  email: string
+  password: string
+}
+
+export interface UpdatePasswordPartnerDto {
+  id: number
+  password: string
+}
+
+// Parámetros de paginación para partners
+export interface PartnerPaginationParams {
+  page?: number
+  items?: number
+}
+
+// Respuesta paginada para partners
+export interface PartnerPaginatedResponse<T> {
+  response: T[]
+  pagination: {
+    currentPage: number
+    itemsPerPage: number
+    totalItems: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+}
+
+// Filtros para partners
+export interface PartnerFilters {
+  search?: string
+  email?: string
+  isActive?: boolean | null
+}
+
+// Estados para formularios de partners
+export interface PartnerFormData {
+  name: string
+  lastname: string
+  email: string
+  password: string
+  token: string
+}
