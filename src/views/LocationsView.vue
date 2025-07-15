@@ -185,25 +185,62 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import {
-  Plus,
-  Search,
-  Edit,
-  Delete,
-  Location,
-  User,
-  Check,
-  CloseBold,
-} from '@element-plus/icons-vue'
-import { LocationService } from '@/services/locationService'
+import { Plus, Search, Edit, Delete, Location, User, Check, CloseBold } from '@element-plus/icons-vue'
+// import { LocationService } from '@/services/locationService'
 import { useFilters } from '@/composables/useFilters'
-import type { Location as LocationType, CreateLocationDto, UpdateLocationDto } from '@/types/api'
+import type { Location as LocationType } from '@/types/api'
 
 // Referencias
 const locationFormRef = ref<FormInstance>()
 
-// Estados reactivos
-const locations = ref<LocationType[]>([])
+// Datos de prueba para ubicaciones
+const locations = ref<LocationType[]>([
+  {
+    id: 1,
+    name: 'Auditorio Central',
+    capacity: 500,
+    isActive: true,
+    deleted: false,
+    createdAt: '2025-07-01T10:00:00Z',
+    updatedAt: '2025-07-10T12:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Sala de Conferencias',
+    capacity: 120,
+    isActive: true,
+    deleted: false,
+    createdAt: '2025-07-02T11:00:00Z',
+    updatedAt: '2025-07-11T13:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Aula Magna',
+    capacity: 300,
+    isActive: false,
+    deleted: false,
+    createdAt: '2025-07-03T12:00:00Z',
+    updatedAt: '2025-07-12T14:00:00Z',
+  },
+  {
+    id: 4,
+    name: 'Patio Exterior',
+    capacity: 1000,
+    isActive: true,
+    deleted: false,
+    createdAt: '2025-07-04T13:00:00Z',
+    updatedAt: '2025-07-13T15:00:00Z',
+  },
+  {
+    id: 5,
+    name: 'Sala VIP',
+    capacity: 50,
+    isActive: false,
+    deleted: false,
+    createdAt: '2025-07-05T14:00:00Z',
+    updatedAt: '2025-07-14T16:00:00Z',
+  },
+])
 const loading = ref(false)
 const showCreateDialog = ref(false)
 const isEditing = ref(false)
@@ -213,20 +250,22 @@ const { filters, clearFilters, filterArrayLocally } = useFilters<{
   search: string
   status: string
   minCapacity: string
-}>({
-  storageKey: 'locations-filters',
-  debounceMs: 300,
-  initialFilters: {
-    search: '',
-    status: '',
-    minCapacity: '',
+}>(
+  {
+    storageKey: 'locations-filters',
+    debounceMs: 300,
+    initialFilters: {
+      search: '',
+      status: '',
+      minCapacity: '',
+    },
   },
-})
+)
 
 // Variables de paginación
 const currentPage = ref(1)
 const pageSize = ref(10)
-const totalLocations = ref(0)
+const totalLocations = ref(locations.value.length)
 
 // Formulario para crear/editar ubicación
 const locationForm = reactive({
@@ -265,13 +304,13 @@ const formatDate = (dateString: string) => {
 
 // Computed para ubicaciones filtradas
 const filteredLocations = computed(() => {
-  const result = filterArrayLocally(locations.value, {
+  let result = filterArrayLocally(locations.value, {
     searchFields: ['name'],
     customFilters: {
       status: (location: LocationType, filterValue: string) => {
         if (filterValue === 'active') return location.isActive
         if (filterValue === 'inactive') return !location.isActive
-        return true // Si no hay filtro de estado, mostrar todas
+        return true
       },
       minCapacity: (location: LocationType, filterValue: string) => {
         if (!filterValue || filterValue === '') return true
@@ -280,43 +319,11 @@ const filteredLocations = computed(() => {
       },
     },
   })
-
-  return result
+  totalLocations.value = result.length
+  // Simular paginación
+  const start = (currentPage.value - 1) * pageSize.value
+  return result.slice(start, start + pageSize.value)
 })
-
-const fetchLocations = async () => {
-  try {
-    loading.value = true
-
-    // Primero intentamos con paginación, si falla usamos getAllLocations
-    try {
-      const response = await LocationService.getLocationsPaginated({
-        page: currentPage.value,
-        items: pageSize.value,
-      })
-
-      locations.value = response.response || []
-      totalLocations.value = response.pagination?.totalItems || 0
-    } catch {
-      // Fallback: obtener todas las ubicaciones y simular paginación en el frontend
-      const allLocations = await LocationService.getAllLocations()
-
-      // Simular paginación en el frontend
-      const startIndex = (currentPage.value - 1) * pageSize.value
-      const endIndex = startIndex + pageSize.value
-
-      locations.value = allLocations.slice(startIndex, endIndex)
-      totalLocations.value = allLocations.length
-    }
-  } catch (error) {
-    console.error('❌ Error al cargar ubicaciones:', error)
-    ElMessage.error('Error al cargar ubicaciones')
-    locations.value = []
-    totalLocations.value = 0
-  } finally {
-    loading.value = false
-  }
-}
 
 const editLocation = (location: LocationType) => {
   isEditing.value = true
@@ -329,32 +336,15 @@ const editLocation = (location: LocationType) => {
 const toggleLocationStatus = async (location: LocationType) => {
   try {
     loading.value = true
-    const action = location.isActive ? 'desactivar' : 'activar'
-
-    await ElMessageBox.confirm(
-      `¿Estás seguro de ${action} la ubicación "${location.name}"?`,
-      `Confirmar ${action}`,
-      {
-        confirmButtonText: action.charAt(0).toUpperCase() + action.slice(1),
-        cancelButtonText: 'Cancelar',
-        type: 'warning',
-      },
-    )
-
-    if (location.isActive) {
-      await LocationService.deactivateLocation(location.id)
-      ElMessage.success('Ubicación desactivada exitosamente')
-    } else {
-      await LocationService.activateLocation(location.id)
-      ElMessage.success('Ubicación activada exitosamente')
+    // Simular cambio de estado visual
+    const idx = locations.value.findIndex(l => l.id === location.id)
+    if (idx !== -1) {
+      locations.value[idx].isActive = !locations.value[idx].isActive
+      ElMessage.success(`Ubicación ${locations.value[idx].isActive ? 'activada' : 'desactivada'} exitosamente`)
     }
-
-    await fetchLocations()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Error toggling location status:', error)
-      ElMessage.error('Error al cambiar el estado de la ubicación')
-    }
+    console.error('Error toggling location status:', error)
+    ElMessage.error('Error al cambiar el estado de la ubicación')
   } finally {
     loading.value = false
   }
@@ -371,11 +361,11 @@ const deleteLocation = async (location: LocationType) => {
         type: 'warning',
       },
     )
-
     loading.value = true
-    await LocationService.deleteLocation(location.id)
+    // Simular eliminación visual
+    locations.value = locations.value.filter(l => l.id !== location.id)
     ElMessage.success('Ubicación eliminada exitosamente')
-    await fetchLocations()
+    totalLocations.value = locations.value.length
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Error deleting location:', error)
@@ -388,34 +378,35 @@ const deleteLocation = async (location: LocationType) => {
 
 const saveLocation = async () => {
   if (!locationFormRef.value) return
-
   await locationFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
         loading.value = true
-
         if (isEditing.value) {
-          const updateData: UpdateLocationDto = {
-            id: locationForm.id,
-            name: locationForm.name,
-            capacity: locationForm.capacity,
+          // Simular edición visual
+          const idx = locations.value.findIndex(l => l.id === locationForm.id)
+          if (idx !== -1) {
+            locations.value[idx].name = locationForm.name
+            locations.value[idx].capacity = locationForm.capacity
+            ElMessage.success('Ubicación actualizada exitosamente')
           }
-
-          await LocationService.updateLocation(updateData)
-          ElMessage.success('Ubicación actualizada exitosamente')
         } else {
-          const createData: CreateLocationDto = {
+          // Simular creación visual
+          const newId = Math.max(...locations.value.map(l => l.id)) + 1
+          locations.value.push({
+            id: newId,
             name: locationForm.name,
             capacity: locationForm.capacity,
-          }
-
-          await LocationService.createLocation(createData)
+            isActive: true,
+            deleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
           ElMessage.success('Ubicación creada exitosamente')
+          totalLocations.value = locations.value.length
         }
-
         resetForm()
         showCreateDialog.value = false
-        await fetchLocations()
       } catch (error) {
         console.error('Error saving location:', error)
         ElMessage.error('Error al guardar ubicación')
@@ -442,17 +433,15 @@ const openCreateDialog = () => {
 const handleSizeChange = (size: number) => {
   pageSize.value = size
   currentPage.value = 1
-  fetchLocations()
 }
 
 const handlePageChange = (page: number) => {
   currentPage.value = page
-  fetchLocations()
 }
 
 // Inicialización
-onMounted(async () => {
-  await fetchLocations()
+onMounted(() => {
+  // No se realiza fetch, los datos son locales
 })
 </script>
 
