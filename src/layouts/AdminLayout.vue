@@ -54,6 +54,11 @@
           <template #title>Partners</template>
         </el-menu-item>
 
+        <el-menu-item index="/sales">
+          <el-icon><Shop /></el-icon>
+          <template #title>Ventas</template>
+        </el-menu-item>
+
         <el-divider />
 
         <el-menu-item index="/settings">
@@ -153,6 +158,7 @@ import {
   Connection,
   Avatar,
   SwitchButton,
+  Shop,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -176,6 +182,7 @@ const currentPageTitle = computed(() => {
     '/locations': 'Ubicaciones',
     '/event-locations': 'Relaciones Evento-Ubicación',
     '/partners': 'Gestión de Partners',
+    '/sales': 'Gestión de Ventas',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }

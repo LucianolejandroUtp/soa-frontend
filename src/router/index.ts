@@ -66,6 +66,11 @@ const router = createRouter({
           component: () => import('../views/PartnersView.vue'),
         },
         {
+          path: 'sales',
+          name: 'sales',
+          component: () => import('../views/SalesView.vue'),
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('../views/AboutView.vue'), // Temporal
