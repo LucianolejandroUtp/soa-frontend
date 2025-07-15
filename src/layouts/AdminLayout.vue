@@ -64,6 +64,11 @@
           <template #title>Tickets</template>
         </el-menu-item>
 
+        <el-menu-item index="/sale-details">
+          <el-icon><DocumentChecked /></el-icon>
+          <template #title>Detalles Ventas</template>
+        </el-menu-item>
+
         <el-divider />
 
         <el-menu-item index="/settings">
@@ -165,6 +170,7 @@ import {
   SwitchButton,
   Shop,
   Ticket,
+  DocumentChecked,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -190,6 +196,7 @@ const currentPageTitle = computed(() => {
     '/partners': 'Gestión de Partners',
     '/sales': 'Gestión de Ventas',
     '/tickets': 'Gestión de Tickets',
+    '/sale-details': 'Detalles de Ventas',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }
