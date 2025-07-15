@@ -37,6 +37,16 @@
           />
         </el-form-item>
 
+        <!-- Número de Documento -->
+        <el-form-item label="Número de Documento" prop="documentNumber">
+          <el-input
+            v-model="registerForm.documentNumber"
+            placeholder="Cédula de ciudadanía"
+            :prefix-icon="User"
+            clearable
+          />
+        </el-form-item>
+
         <!-- Contraseña y Confirmar Contraseña -->
         <el-row :gutter="20">
           <el-col :span="12">
@@ -110,7 +120,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Message, Lock } from '@element-plus/icons-vue'
+import { Message, Lock, User } from '@element-plus/icons-vue'
 import { UserService } from '@/services/userService'
 
 const router = useRouter()
@@ -122,6 +132,7 @@ const registerForm = reactive({
   firstName: '',
   lastName: '',
   email: '',
+  documentNumber: '',
   password: '',
   confirmPassword: '',
   acceptTerms: false,
@@ -165,6 +176,11 @@ const registerRules: FormRules = {
     { required: true, message: 'El email es requerido', trigger: 'blur' },
     { type: 'email', message: 'Formato de email inválido', trigger: 'blur' },
   ],
+  documentNumber: [
+    { required: true, message: 'El número de documento es requerido', trigger: 'blur' },
+    { min: 6, max: 20, message: 'El número de documento debe tener entre 6 y 20 caracteres', trigger: 'blur' },
+    { pattern: /^[0-9]+$/, message: 'El número de documento solo puede contener números', trigger: 'blur' },
+  ],
   password: [
     { required: true, message: 'La contraseña es requerida', trigger: 'blur' },
     { min: 8, message: 'La contraseña debe tener al menos 8 caracteres', trigger: 'blur' },
@@ -193,6 +209,7 @@ const handleRegister = async () => {
       firstName: registerForm.firstName,
       lastName: registerForm.lastName,
       email: registerForm.email,
+      documentNumber: registerForm.documentNumber,
       password: registerForm.password,
     }
 
