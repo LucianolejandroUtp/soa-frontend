@@ -204,20 +204,35 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { Plus, Search, Edit, Delete, Calendar, Check, CloseBold } from '@element-plus/icons-vue'
-import { EventLocationService } from '@/services/eventLocationService'
-import { EventService } from '@/services/eventService'
-import { LocationService } from '@/services/locationService'
-import { useFilters } from '@/composables/useFilters'
-import type {
-  EventLocationBasic,
-  CreateEventLocationDto,
-  UpdateEventLocationDto,
-  Event,
-  Location,
-} from '@/types/api'
 
+// Tipos locales para datos de prueba
+type EventType = {
+  id: number
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+type LocationType = {
+  id: number
+  name: string
+  capacity: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+type EventLocationType = {
+  id: number
+  event_id: number
+  location_id: number
+  name: string
+  price: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 // Estados reactivos
 const loading = ref(false)
 const formLoading = ref(false)
@@ -225,39 +240,59 @@ const dialogVisible = ref(false)
 const isEditing = ref(false)
 const formRef = ref<FormInstance>()
 
-const eventLocations = ref<EventLocationBasic[]>([])
-const availableEvents = ref<Event[]>([])
-const availableLocations = ref<Location[]>([])
+// Datos de prueba para eventos
+const availableEvents = ref([
+  { id: 1, name: 'Concierto Rock', isActive: true, createdAt: '2025-07-01T10:00:00Z', updatedAt: '2025-07-10T12:00:00Z' },
+  { id: 2, name: 'Feria Tecnológica', isActive: true, createdAt: '2025-07-02T11:00:00Z', updatedAt: '2025-07-11T13:00:00Z' },
+  { id: 3, name: 'Charla Motivacional', isActive: false, createdAt: '2025-07-03T12:00:00Z', updatedAt: '2025-07-12T14:00:00Z' },
+])
+// Datos de prueba para ubicaciones
+const availableLocations = ref([
+  { id: 1, name: 'Auditorio Central', capacity: 500, isActive: true, createdAt: '2025-07-01T10:00:00Z', updatedAt: '2025-07-10T12:00:00Z' },
+  { id: 2, name: 'Sala de Conferencias', capacity: 120, isActive: true, createdAt: '2025-07-02T11:00:00Z', updatedAt: '2025-07-11T13:00:00Z' },
+  { id: 3, name: 'Aula Magna', capacity: 300, isActive: false, createdAt: '2025-07-03T12:00:00Z', updatedAt: '2025-07-12T14:00:00Z' },
+])
+// Datos de prueba para relaciones evento-ubicación
+const eventLocations = ref([
+  { id: 1, event_id: 1, location_id: 1, name: 'VIP', price: 150000, isActive: true, createdAt: '2025-07-01T10:00:00Z', updatedAt: '2025-07-10T12:00:00Z' },
+  { id: 2, event_id: 1, location_id: 2, name: 'General', price: 80000, isActive: true, createdAt: '2025-07-02T11:00:00Z', updatedAt: '2025-07-11T13:00:00Z' },
+  { id: 3, event_id: 2, location_id: 3, name: 'Platino', price: 200000, isActive: false, createdAt: '2025-07-03T12:00:00Z', updatedAt: '2025-07-12T14:00:00Z' },
+  { id: 4, event_id: 3, location_id: 1, name: 'General', price: 50000, isActive: true, createdAt: '2025-07-04T13:00:00Z', updatedAt: '2025-07-13T15:00:00Z' },
+])
 
 const pagination = ref({
   currentPage: 1,
   pageSize: 20,
-  total: 0,
+  total: eventLocations.value.length,
 })
 
 // Composable de filtros
+import { useFilters } from '@/composables/useFilters'
 const { filters, clearFilters, filterArrayLocally } = useFilters<{
   search: string
   status: string
-}>({
-  storageKey: 'event-locations-filters',
-  debounceMs: 300,
-  initialFilters: {
-    search: '',
-    status: '',
+}>(
+  {
+    storageKey: 'event-locations-filters',
+    debounceMs: 300,
+    initialFilters: {
+      search: '',
+      status: '',
+    },
   },
-})
+)
 
 // Datos del formulario
-const formData = ref<CreateEventLocationDto & { id?: number; isActive?: boolean }>({
+const formData = ref<Partial<EventLocationType>>({
   event_id: 0,
   location_id: 0,
   name: '',
   price: 0,
+  isActive: true,
 })
 
 // Reglas de validación
-const formRules: FormRules = {
+const formRules = {
   eventId: [{ required: true, message: 'Selecciona un evento', trigger: 'change' }],
   locationId: [{ required: true, message: 'Selecciona una ubicación', trigger: 'change' }],
   name: [
@@ -272,50 +307,23 @@ const formRules: FormRules = {
 
 // Computed para relaciones filtradas
 const filteredEventLocations = computed(() => {
-  return filterArrayLocally(eventLocations.value, {
+  let result = filterArrayLocally(eventLocations.value, {
     searchFields: ['name'],
     customFilters: {
-      status: (eventLocation: EventLocationBasic, filterValue: string) => {
+      status: (eventLocation: EventLocationType, filterValue: string): boolean => {
         if (filterValue === 'active') return eventLocation.isActive
         if (filterValue === 'inactive') return !eventLocation.isActive
         return true
       },
     },
   })
+  pagination.value.total = result.length
+  // Simular paginación
+  const start = (pagination.value.currentPage - 1) * pagination.value.pageSize
+  return result.slice(start, start + pagination.value.pageSize)
 })
 
 // Métodos
-const loadEventLocations = async (): Promise<void> => {
-  try {
-    loading.value = true
-    eventLocations.value = await EventLocationService.getAllEventLocations()
-    pagination.value.total = eventLocations.value.length
-  } catch (error) {
-    console.error('❌ Error al cargar relaciones evento-ubicación:', error)
-    ElMessage.error('Error al cargar las relaciones')
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadAvailableEvents = async (): Promise<void> => {
-  try {
-    availableEvents.value = await EventService.getAllEvents()
-  } catch (error) {
-    console.error('Error al cargar eventos:', error)
-    ElMessage.error('Error al cargar los eventos disponibles')
-  }
-}
-
-const loadAvailableLocations = async (): Promise<void> => {
-  try {
-    availableLocations.value = await LocationService.getAllLocations()
-  } catch (error) {
-    console.error('Error al cargar ubicaciones:', error)
-    ElMessage.error('Error al cargar las ubicaciones disponibles')
-  }
-}
-
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('es-CO', {
     year: 'numeric',
@@ -331,12 +339,12 @@ const openCreateDialog = (): void => {
     location_id: 0,
     name: '',
     price: 0,
+    isActive: true,
   }
   dialogVisible.value = true
 }
 
 const openEditDialog = (): void => {
-  // TODO: Implementar edición cuando la API devuelva las relaciones completas
   ElMessage.warning('La edición estará disponible cuando la API devuelva las relaciones completas')
 }
 
@@ -345,7 +353,6 @@ const handleDialogClose = (done: () => void): void => {
     ElMessage.warning('Operación en progreso, por favor espera...')
     return
   }
-
   if (formRef.value) {
     formRef.value.resetFields()
   }
@@ -357,42 +364,29 @@ const handleSubmit = async (): Promise<void> => {
   try {
     await formRef.value.validate()
     formLoading.value = true
-
-    if (isEditing.value && formData.value.id) {
-      const updateData: UpdateEventLocationDto = {
-        id: formData.value.id,
-        event_id: formData.value.event_id,
-        location_id: formData.value.location_id,
-        name: formData.value.name,
-        price: formData.value.price,
-        is_active: formData.value.isActive || false,
-      }
-
-      await EventLocationService.updateEventLocation(updateData)
-      ElMessage.success('Relación actualizada exitosamente')
-    } else {
-      const createData: CreateEventLocationDto = {
-        event_id: formData.value.event_id,
-        location_id: formData.value.location_id,
-        name: formData.value.name,
-        price: formData.value.price,
-      }
-
-      await EventLocationService.createEventLocation(createData)
-      ElMessage.success('Relación creada exitosamente')
-    }
-
+    // Simular creación visual
+    const newId = Math.max(...eventLocations.value.map((e: EventLocationType) => e.id)) + 1
+    eventLocations.value.push({
+      id: newId,
+      event_id: formData.value.event_id ?? 0,
+      location_id: formData.value.location_id ?? 0,
+      name: formData.value.name ?? '',
+      price: formData.value.price ?? 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    ElMessage.success('Relación creada exitosamente')
     dialogVisible.value = false
-    await loadEventLocations()
+    formLoading.value = false
   } catch (error) {
     console.error('Error al guardar relación:', error)
     ElMessage.error('Error al guardar la relación')
-  } finally {
     formLoading.value = false
   }
 }
 
-const toggleStatus = async (eventLocation: EventLocationBasic): Promise<void> => {
+const toggleStatus = async (eventLocation: EventLocationType): Promise<void> => {
   try {
     const action = eventLocation.isActive ? 'desactivar' : 'activar'
     await ElMessageBox.confirm(`¿Estás seguro de ${action} esta relación?`, 'Confirmar acción', {
@@ -400,16 +394,12 @@ const toggleStatus = async (eventLocation: EventLocationBasic): Promise<void> =>
       cancelButtonText: 'Cancelar',
       type: 'warning',
     })
-
-    if (eventLocation.isActive) {
-      await EventLocationService.deactivateEventLocation(eventLocation.id)
-      ElMessage.success('Relación desactivada')
-    } else {
-      await EventLocationService.activateEventLocation(eventLocation.id)
-      ElMessage.success('Relación activada')
+    // Simular cambio de estado visual
+    const idx = eventLocations.value.findIndex((e: EventLocationType) => e.id === eventLocation.id)
+    if (idx !== -1) {
+      eventLocations.value[idx].isActive = !eventLocations.value[idx].isActive
+      ElMessage.success(`Relación ${eventLocations.value[idx].isActive ? 'activada' : 'desactivada'}`)
     }
-
-    await loadEventLocations()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Error al cambiar estado:', error)
@@ -420,9 +410,10 @@ const toggleStatus = async (eventLocation: EventLocationBasic): Promise<void> =>
 
 const deleteEventLocation = async (id: number): Promise<void> => {
   try {
-    await EventLocationService.deleteEventLocation(id)
+    // Simular eliminación visual
+    eventLocations.value = eventLocations.value.filter((e: EventLocationType) => e.id !== id)
     ElMessage.success('Relación eliminada exitosamente')
-    await loadEventLocations()
+    pagination.value.total = eventLocations.value.length
   } catch (error) {
     console.error('Error al eliminar relación:', error)
     ElMessage.error('Error al eliminar la relación')
@@ -439,8 +430,8 @@ const handleCurrentChange = (val: number): void => {
 }
 
 // Inicialización
-onMounted(async () => {
-  await Promise.all([loadEventLocations(), loadAvailableEvents(), loadAvailableLocations()])
+onMounted(() => {
+  // Los datos de prueba ya están cargados
 })
 </script>
 
