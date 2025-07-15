@@ -59,6 +59,11 @@
           <template #title>Ventas</template>
         </el-menu-item>
 
+        <el-menu-item index="/tickets">
+          <el-icon><Ticket /></el-icon>
+          <template #title>Tickets</template>
+        </el-menu-item>
+
         <el-divider />
 
         <el-menu-item index="/settings">
@@ -159,6 +164,7 @@ import {
   Avatar,
   SwitchButton,
   Shop,
+  Ticket,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -183,6 +189,7 @@ const currentPageTitle = computed(() => {
     '/event-locations': 'Relaciones Evento-Ubicación',
     '/partners': 'Gestión de Partners',
     '/sales': 'Gestión de Ventas',
+    '/tickets': 'Gestión de Tickets',
     '/settings': 'Configuración',
     '/about': 'Acerca de',
   }
